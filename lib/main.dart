@@ -35,7 +35,8 @@ class KosakataPage extends StatefulWidget {
 
 class _KosakataPageState extends State<KosakataPage> {
   // URL API ke Laragon
-  final String apiUrl = "http://localhost/api_inggris/get_kosakata.php";
+  final String apiUrl = "http://localhost/belajar_bhsinggris_api/public/api/kosakata";
+
 
   List<dynamic> listKosakata = [];
   bool isLoading = true;
