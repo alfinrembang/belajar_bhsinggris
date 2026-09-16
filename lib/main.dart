@@ -1,3 +1,5 @@
+import 'package:google_fonts/google_fonts.dart';
+import 'Loading_screen/loading.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -19,9 +21,11 @@ class MyApp extends StatelessWidget {
           seedColor: const Color(0xFF6C5CE7),
           brightness: Brightness.light,
         ),
+        fontFamily: GoogleFonts.poppins().fontFamily,
+        textTheme: GoogleFonts.poppinsTextTheme(),
         useMaterial3: true,
       ),
-      home: const KosakataPage(),
+      home: const LoadingScreen(),
     );
   }
 }
@@ -78,8 +82,6 @@ class _KosakataPageState extends State<KosakataPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FE),
       appBar: AppBar(
@@ -160,7 +162,7 @@ class _KosakataPageState extends State<KosakataPage> {
                                   width: 44,
                                   height: 44,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF6C5CE7).withOpacity(0.12),
+                                    color: const Color(0xFF6C5CE7).withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Center(
