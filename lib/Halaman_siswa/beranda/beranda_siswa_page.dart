@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../models/siswa_model.dart';
 import '../../widgets/student_background.dart';
+import '../../widgets/student_sidebar.dart';
 import 'sections/header_section.dart';
 import 'sections/hero_card_section.dart';
 import 'sections/progres_belajar_section.dart';
 import 'sections/lanjutkan_belajar_section.dart';
 import 'sections/akses_cepat_section.dart';
-import 'sections/random_test_section.dart';
 import 'sections/aktivitas_terbaru_section.dart';
 import 'sections/bottom_nav_bar_section.dart';
+import '../materi/materi_siswa_page.dart';
+import '../quiz/quiz_siswa_page.dart';
+import '../game/game_siswa_page.dart';
+import '../profil/profil_siswa_page.dart';
 
 /// Halaman Beranda Siswa (Dashboard Utama).
 /// Disusun secara modular menggunakan konsep sections/partials
@@ -23,6 +27,7 @@ class BerandaSiswaPage extends StatefulWidget {
 }
 
 class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedNavIndex = 0;
 
   @override
@@ -49,13 +54,68 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
             : '14');
 
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: StudentSidebar(
+        siswa: widget.siswa,
+        activeMenu: 'Beranda',
+      ),
       backgroundColor: const Color(0xFFF7FAFE),
       bottomNavigationBar: BottomNavBarSection(
         currentIndex: _selectedNavIndex,
         onTap: (index) {
-          setState(() {
-            _selectedNavIndex = index;
-          });
+          if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    MateriSiswaPage(siswa: widget.siswa),
+                transitionDuration: const Duration(milliseconds: 400),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    QuizSiswaPage(siswa: widget.siswa),
+                transitionDuration: const Duration(milliseconds: 400),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            );
+          } else if (index == 3) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    GameSiswaPage(siswa: widget.siswa),
+                transitionDuration: const Duration(milliseconds: 400),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            );
+          } else if (index == 4) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    ProfilSiswaPage(siswa: widget.siswa),
+                transitionDuration: const Duration(milliseconds: 400),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            );
+          } else {
+            setState(() {
+              _selectedNavIndex = index;
+            });
+          }
         },
       ),
       body: StudentBackground(
@@ -72,7 +132,7 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
                 // 1. Header Section (Menu Hamburger, Judul Beranda, Notifikasi)
                 HeaderSection(
                   onMenuTap: () {
-                    // Aksi Buka Drawer / Menu
+                    _scaffoldKey.currentState?.openDrawer();
                   },
                   onNotificationTap: () {
                     // Aksi Buka Notifikasi
@@ -117,25 +177,46 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
                 // 5. Akses Cepat Section (Materi, Latihan, Listening, Games dengan Icon Cerah)
                 AksesCepatSection(
                   onMateriTap: () {
-                    // Navigasi ke Materi
+                    Navigator.pushReplacement(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            MateriSiswaPage(siswa: widget.siswa),
+                        transitionDuration: const Duration(milliseconds: 400),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                      ),
+                    );
                   },
                   onLatihanTap: () {
-                    // Navigasi ke Latihan
+                    Navigator.pushReplacement(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            QuizSiswaPage(siswa: widget.siswa),
+                        transitionDuration: const Duration(milliseconds: 400),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                      ),
+                    );
                   },
                   onListeningTap: () {
                     // Navigasi ke Listening
                   },
                   onGamesTap: () {
-                    // Navigasi ke Games
-                  },
-                ),
-
-                const SizedBox(height: 18),
-
-                // 6. Random Test Section (Kartu Dadu & Tombol Mulai Test)
-                RandomTestSection(
-                  onMulaiTestTap: () {
-                    // Aksi Mulai Random Test
+                    Navigator.pushReplacement(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            GameSiswaPage(siswa: widget.siswa),
+                        transitionDuration: const Duration(milliseconds: 400),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                      ),
+                    );
                   },
                 ),
 
