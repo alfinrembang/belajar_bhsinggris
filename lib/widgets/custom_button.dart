@@ -110,3 +110,74 @@ class CustomButton extends StatelessWidget {
     );
   }
 }
+
+
+/// Komponen Reusable Toggle Switch (CustomToggleSwitch) yang estetik dan interaktif.
+/// Digunakan pada pengaturan notifikasi/pengingat dan opsi toggle lainnya di seluruh aplikasi.
+class CustomToggleSwitch extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final double width;
+  final double height;
+  final Color activeColor;
+  final Color inactiveColor;
+  final Color thumbColor;
+
+  const CustomToggleSwitch({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.width = 48,
+    this.height = 26,
+    this.activeColor = const Color(0xFF2563EB), // Vibrant Electric Blue
+    this.inactiveColor = const Color(0xFFCBD5E1), // Soft Gray
+    this.thumbColor = Colors.white,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final thumbSize = height - 4.5;
+
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        width: width,
+        height: height,
+        padding: const EdgeInsets.all(2.2),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(height / 2),
+          color: value ? activeColor : inactiveColor,
+          boxShadow: [
+            BoxShadow(
+              color: (value ? activeColor : Colors.black).withValues(alpha: value ? 0.28 : 0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: AnimatedAlign(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: thumbSize,
+            height: thumbSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: thumbColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

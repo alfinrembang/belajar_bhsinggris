@@ -10,6 +10,8 @@ class SiswaModel {
   final String? noAbsen;
   final String? kelasLengkap;
   final String? token;
+  final String? foto;
+  final String? fotoUrl;
 
   SiswaModel({
     this.id,
@@ -23,6 +25,8 @@ class SiswaModel {
     this.noAbsen,
     this.kelasLengkap,
     this.token,
+    this.foto,
+    this.fotoUrl,
   });
 
   factory SiswaModel.fromJson(Map<String, dynamic> json, {String? token}) {
@@ -52,6 +56,8 @@ class SiswaModel {
       noAbsen: json['no_absen']?.toString(),
       kelasLengkap: generatedKelasLengkap,
       token: token ?? json['api_token']?.toString(),
+      foto: json['foto']?.toString(),
+      fotoUrl: json['foto_url']?.toString(),
     );
   }
 
@@ -68,6 +74,40 @@ class SiswaModel {
       'no_absen': noAbsen,
       'kelas_lengkap': kelasLengkap,
       'api_token': token,
+      'foto': foto,
+      'foto_url': fotoUrl,
     };
+  }
+
+  SiswaModel copyWith({
+    int? id,
+    String? namaLengkap,
+    String? email,
+    String? nisn,
+    String? nis,
+    String? kelas,
+    String? jurusan,
+    String? noKelas,
+    String? noAbsen,
+    String? kelasLengkap,
+    String? token,
+    String? foto,
+    String? fotoUrl,
+  }) {
+    return SiswaModel(
+      id: id ?? this.id,
+      namaLengkap: namaLengkap ?? this.namaLengkap,
+      email: email ?? this.email,
+      nisn: nisn ?? this.nisn,
+      nis: nis ?? this.nis,
+      kelas: kelas ?? this.kelas,
+      jurusan: jurusan ?? this.jurusan,
+      noKelas: noKelas ?? this.noKelas,
+      noAbsen: noAbsen ?? this.noAbsen,
+      kelasLengkap: kelasLengkap ?? this.kelasLengkap,
+      token: token ?? this.token,
+      foto: foto ?? this.foto,
+      fotoUrl: fotoUrl ?? this.fotoUrl,
+    );
   }
 }
