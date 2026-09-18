@@ -1,12 +1,14 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../widgets/custom_button.dart';
+import '../../../widgets/materi_thumbnail.dart';
 
 /// Section Lanjutkan Belajar: Menampilkan Materi Terakhir yang Sedang Dipelajari
-/// & Tombol Lanjutkan menggunakan CustomButton konsisten.
+/// & Tombol Lanjutkan menggunakan CustomButton dan MateriThumbnail konsisten.
 class LanjutkanBelajarSection extends StatelessWidget {
   final String judulMateri;
   final String subjudul;
+  final String kategori;
   final int persen;
   final VoidCallback? onLanjutkanTap;
 
@@ -14,6 +16,7 @@ class LanjutkanBelajarSection extends StatelessWidget {
     super.key,
     this.judulMateri = 'Descriptive Text',
     this.subjudul = 'Materi terakhir yang kamu pelajari',
+    this.kategori = 'Text',
     this.persen = 70,
     this.onLanjutkanTap,
   });
@@ -58,23 +61,11 @@ class LanjutkanBelajarSection extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // 1. Ikon Buku (Warna Biru Cerah Berenergi di dalam Lingkaran Soft)
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD6E6FE),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFBFDBFE),
-                    width: 1,
-                  ),
-                ),
-                child: const Icon(
-                  Icons.menu_book_rounded,
-                  color: Color(0xFF0066D6),
-                  size: 22,
-                ),
+              // 1. Thumbnail Materi (Menggunakan Komponen Reusable Konsisten)
+              MateriThumbnail(
+                category: kategori,
+                size: 46,
+                borderRadius: BorderRadius.circular(14),
               ),
 
               const SizedBox(width: 12),
@@ -119,7 +110,7 @@ class LanjutkanBelajarSection extends StatelessWidget {
                                 value: progressValue,
                                 backgroundColor: const Color(0xFFD0E1F9),
                                 valueColor: const AlwaysStoppedAnimation<Color>(
-                                  Color(0xFF006D67),
+                                  Color(0xFF0066D6),
                                 ),
                               ),
                             ),
@@ -127,7 +118,7 @@ class LanjutkanBelajarSection extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '%',
+                          '$persen%',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
