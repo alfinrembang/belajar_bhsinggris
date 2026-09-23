@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../Auth/login_siswa.dart';
 import '../Halaman_siswa/beranda/beranda_siswa_page.dart';
@@ -6,6 +6,7 @@ import '../Halaman_siswa/materi/materi_siswa_page.dart';
 import '../Halaman_siswa/quiz/quiz_siswa_page.dart';
 import '../Halaman_siswa/game/game_siswa_page.dart';
 import '../Halaman_siswa/profil/profil_siswa_page.dart';
+import '../Halaman_siswa/pencapaian/pencapaian_siswa_page.dart';
 import '../models/siswa_model.dart';
 import '../services/api_service.dart';
 
@@ -327,6 +328,33 @@ class StudentSidebar extends StatelessWidget {
                           PageRouteBuilder(
                             pageBuilder: (c, a, s) =>
                                 GameSiswaPage(siswa: siswa),
+                            transitionDuration: const Duration(milliseconds: 350),
+                            transitionsBuilder: (c, a, s, child) =>
+                                FadeTransition(opacity: a, child: child),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // 5.5. Menu Pencapaian
+                  _buildMenuItem(
+                    context: context,
+                    title: 'Pencapaian',
+                    icon: Icons.emoji_events_rounded,
+                    iconColor: const Color(0xFFCA8A04),
+                    iconBgColor: const Color(0xFFFEF9C3),
+                    isActive: activeMenu.toLowerCase() == 'pencapaian',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      if (activeMenu.toLowerCase() != 'pencapaian') {
+                        Navigator.pushReplacement(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (c, a, s) =>
+                                PencapaianSiswaPage(siswa: siswa),
                             transitionDuration: const Duration(milliseconds: 350),
                             transitionsBuilder: (c, a, s, child) =>
                                 FadeTransition(opacity: a, child: child),
