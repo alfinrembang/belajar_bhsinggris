@@ -7,6 +7,7 @@ import '../beranda/sections/bottom_nav_bar_section.dart';
 import '../materi/materi_siswa_page.dart';
 import '../quiz/quiz_siswa_page.dart';
 import '../profil/profil_siswa_page.dart';
+import '../pencapaian/pencapaian_siswa_page.dart';
 import 'sections/game_filter_section.dart';
 import 'sections/game_grid_section.dart';
 import 'sections/game_header_section.dart';
@@ -113,6 +114,16 @@ class _GameSiswaPageState extends State<GameSiswaPage> {
         ),
       );
     } else if (index == 4) {
+      // Ke Halaman Pencapaian
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (c, a, s) => PencapaianSiswaPage(siswa: widget.siswa),
+          transitionDuration: const Duration(milliseconds: 350),
+          transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
+        ),
+      );
+    } else if (index == 5) {
       // Ke Halaman Profil
       Navigator.pushReplacement(
         context,

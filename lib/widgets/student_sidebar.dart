@@ -6,6 +6,7 @@ import '../Halaman_siswa/materi/materi_siswa_page.dart';
 import '../Halaman_siswa/quiz/quiz_siswa_page.dart';
 import '../Halaman_siswa/game/game_siswa_page.dart';
 import '../Halaman_siswa/profil/profil_siswa_page.dart';
+import '../Halaman_siswa/pencapaian/pencapaian_siswa_page.dart';
 import '../models/siswa_model.dart';
 import '../services/api_service.dart';
 
@@ -338,7 +339,34 @@ class StudentSidebar extends StatelessWidget {
 
                   const SizedBox(height: 6),
 
-                  // 6. Menu Profil
+                  // 6. Menu Pencapaian
+                  _buildMenuItem(
+                    context: context,
+                    title: 'Pencapaian',
+                    icon: Icons.emoji_events_rounded,
+                    iconColor: const Color(0xFFEAB308),
+                    iconBgColor: const Color(0xFFFEF9C3),
+                    isActive: activeMenu.toLowerCase() == 'pencapaian',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      if (activeMenu.toLowerCase() != 'pencapaian') {
+                        Navigator.pushReplacement(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (c, a, s) =>
+                                PencapaianSiswaPage(siswa: siswa),
+                            transitionDuration: const Duration(milliseconds: 350),
+                            transitionsBuilder: (c, a, s, child) =>
+                                FadeTransition(opacity: a, child: child),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // 7. Menu Profil
                   _buildMenuItem(
                     context: context,
                     title: 'Profil',

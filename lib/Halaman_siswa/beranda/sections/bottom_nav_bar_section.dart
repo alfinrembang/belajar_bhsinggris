@@ -1,8 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Section Bottom Navigation Bar: Menampilkan 5 Menu Navigasi Siswa
-/// (Beranda, Materi, Quiz, Game, Profil).
+/// Section Bottom Navigation Bar: Menampilkan 6 Menu Navigasi Siswa
+/// (Beranda, Materi, Quiz, Game, Pencapaian, Profil).
 class BottomNavBarSection extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int>? onTap;
@@ -29,8 +29,8 @@ class BottomNavBarSection extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Container(
-          height: 62,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -60,6 +60,12 @@ class BottomNavBarSection extends StatelessWidget {
               ),
               _buildNavItem(
                 index: 4,
+                label: 'Pencapaian',
+                icon: Icons.emoji_events_outlined,
+                selectedIcon: Icons.emoji_events_rounded,
+              ),
+              _buildNavItem(
+                index: 5,
                 label: 'Profil',
                 icon: Icons.account_circle_outlined,
                 selectedIcon: Icons.account_circle_rounded,
@@ -92,15 +98,19 @@ class BottomNavBarSection extends StatelessWidget {
             Icon(
               isSelected ? selectedIcon : icon,
               color: isSelected ? activeColor : inactiveColor,
-              size: 23,
+              size: 22,
             ),
             const SizedBox(height: 3),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 10.5,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? activeColor : inactiveColor,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? activeColor : inactiveColor,
+                ),
               ),
             ),
           ],

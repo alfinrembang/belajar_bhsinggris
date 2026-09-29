@@ -7,6 +7,7 @@ import '../beranda/sections/bottom_nav_bar_section.dart';
 import '../materi/materi_siswa_page.dart';
 import '../quiz/quiz_siswa_page.dart';
 import '../game/game_siswa_page.dart';
+import '../pencapaian/pencapaian_siswa_page.dart';
 import 'sections/profil_header_section.dart';
 import 'sections/profil_lencana_section.dart';
 import 'sections/profil_settings_section.dart';
@@ -29,7 +30,7 @@ class ProfilSiswaPage extends StatefulWidget {
 
 class _ProfilSiswaPageState extends State<ProfilSiswaPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  int _selectedNavIndex = 4; // Tab Profil aktif (Index 4)
+  int _selectedNavIndex = 5; // Tab Profil aktif (Index 4)
   late SiswaModel? _currentSiswa;
 
   @override
@@ -73,6 +74,15 @@ class _ProfilSiswaPageState extends State<ProfilSiswaPage> {
         context,
         PageRouteBuilder(
           pageBuilder: (c, a, s) => GameSiswaPage(siswa: widget.siswa),
+          transitionDuration: const Duration(milliseconds: 350),
+          transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
+        ),
+      );
+    } else if (index == 4) {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (c, a, s) => PencapaianSiswaPage(siswa: widget.siswa),
           transitionDuration: const Duration(milliseconds: 350),
           transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
         ),
