@@ -10,7 +10,7 @@ class ApiService {
   // Alamat server utama: 127.0.0.1 (aktif via ADB Reverse USB)
   // dan fallback otomatis ke IP Wi-Fi lokal jika USB dilepas
   static const String _primaryUrl = 'http://127.0.0.1:8000/api';
-  static const String _fallbackUrl = 'http://192.168.137.109:8000/api';
+  static const String _fallbackUrl = 'http://192.168.1.8:8000/api';
 
   static String activeBaseUrl = _primaryUrl;
 
