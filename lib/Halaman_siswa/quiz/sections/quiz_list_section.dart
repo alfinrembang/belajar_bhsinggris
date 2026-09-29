@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../isi_quiz/isi_quiz_page.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/materi_thumbnail.dart';
 
@@ -266,10 +267,14 @@ class QuizListSection extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 onTap: () {
                   Navigator.of(ctx).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Memulai kuis ${item.title}...'),
-                      duration: const Duration(seconds: 2),
+                  Navigator.of(context).push(
+                    PageRouteBuilder(
+                      pageBuilder: (c, a, s) => IsiQuizPage(
+                        quizData: item,
+                      ),
+                      transitionDuration: const Duration(milliseconds: 300),
+                      transitionsBuilder: (c, a, s, child) =>
+                          FadeTransition(opacity: a, child: child),
                     ),
                   );
                 },

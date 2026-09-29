@@ -7,10 +7,12 @@ import '../beranda/sections/bottom_nav_bar_section.dart';
 import '../materi/materi_siswa_page.dart';
 import '../game/game_siswa_page.dart';
 import '../profil/profil_siswa_page.dart';
+import '../pencapaian/pencapaian_siswa_page.dart';
 import 'sections/quiz_header_section.dart';
 import 'sections/quiz_join_room_section.dart';
 import 'sections/quiz_list_section.dart';
 import 'sections/quiz_tersedia_header_section.dart';
+import 'isi_quiz/isi_quiz_page.dart';
 
 /// Halaman Utama Quiz Siswa.
 /// Disusun secara modular menggunakan sub-sections terpisah,
@@ -112,6 +114,19 @@ class _QuizSiswaPageState extends State<QuizSiswaPage> {
         ),
       );
     } else if (index == 4) {
+      // Ke Halaman Pencapaian
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              PencapaianSiswaPage(siswa: widget.siswa),
+          transitionDuration: const Duration(milliseconds: 350),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      );
+    } else if (index == 5) {
       // Ke Halaman Profil
       Navigator.pushReplacement(
         context,
@@ -204,10 +219,15 @@ class _QuizSiswaPageState extends State<QuizSiswaPage> {
                 QuizListSection(
                   items: _availableQuizzes,
                   onMulaiQuiz: (quiz) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Memulai kuis ${quiz.title}...'),
-                        duration: const Duration(seconds: 2),
+                    Navigator.of(context).push(
+                      PageRouteBuilder(
+                        pageBuilder: (c, a, s) => IsiQuizPage(
+                          siswa: widget.siswa,
+                          quizData: quiz,
+                        ),
+                        transitionDuration: const Duration(milliseconds: 300),
+                        transitionsBuilder: (c, a, s, child) =>
+                            FadeTransition(opacity: a, child: child),
                       ),
                     );
                   },
