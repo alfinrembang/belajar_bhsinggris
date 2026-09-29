@@ -11,6 +11,7 @@ import 'sections/game_filter_section.dart';
 import 'sections/game_grid_section.dart';
 import 'sections/game_header_section.dart';
 import 'sections/game_leaderboard_section.dart';
+import 'puzzle/puzzle_home_page.dart';
 
 /// Halaman Utama Game Edukasi Siswa.
 /// Disusun secara modular menggunakan sub-sections terpisah,
@@ -30,16 +31,16 @@ class _GameSiswaPageState extends State<GameSiswaPage> {
   int _selectedNavIndex = 3; // Tab Game aktif (Index 3)
   String _selectedCategory = 'Semua';
 
-  // Daftar data kartu permainan edukasi bahasa Inggris
   final List<GameItemData> _allGames = const [
     GameItemData(
-      id: 'g1',
-      title: 'Rangkai Kata',
-      description: 'Permainan Merangkai Kata, Rangkai Kata dengan Benar',
-      category: 'text',
-      themeColor: Color(0xFF3B82F6), // Biru Terang
-      badgeColor: Color(0xFF60A5FA),
-      badgeText: 'Tt Kata',
+      id: 'puzzle_master',
+      title: 'Puzzle Master',
+      description: 'Susun potongan, temukan keindahan!',
+      category: 'vocabulary',
+      themeColor: Color(0xFFF59E0B), // Kuning Amber
+      badgeColor: Color(0xFFFCD34D),
+      badgeText: '🧩 Puzzle',
+      customIcon: Icons.extension_rounded,
     ),
     GameItemData(
       id: 'g2',
@@ -191,12 +192,23 @@ class _GameSiswaPageState extends State<GameSiswaPage> {
                 GameGridSection(
                   items: _filteredGames,
                   onPlayGame: (game) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Memulai permainan ${game.title}...'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
+                    if (game.id == 'puzzle_master') {
+                      Navigator.push(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder: (c, a, s) => PuzzleHomePage(siswa: widget.siswa),
+                          transitionDuration: const Duration(milliseconds: 350),
+                          transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Memulai permainan ${game.title}...'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
                   },
                 ),
 
