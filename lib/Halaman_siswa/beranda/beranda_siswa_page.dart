@@ -13,6 +13,9 @@ import '../materi/materi_siswa_page.dart';
 import '../quiz/quiz_siswa_page.dart';
 import '../game/game_siswa_page.dart';
 import '../profil/profil_siswa_page.dart';
+import '../pencapaian/pencapaian_siswa_page.dart';
+import '../listening/listening_siswa_page.dart';
+import '../materi/isi_materi/isi_materi_page.dart';
 
 /// Halaman Beranda Siswa (Dashboard Utama).
 /// Disusun secara modular menggunakan konsep sections/partials
@@ -104,6 +107,18 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
               context,
               PageRouteBuilder(
                 pageBuilder: (context, animation, secondaryAnimation) =>
+                    PencapaianSiswaPage(siswa: widget.siswa),
+                transitionDuration: const Duration(milliseconds: 350),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+              ),
+            );
+          } else if (index == 5) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
                     ProfilSiswaPage(siswa: widget.siswa),
                 transitionDuration: const Duration(milliseconds: 400),
                 transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -168,7 +183,21 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
                   subjudul: 'Materi terakhir yang kamu pelajari',
                   persen: 70,
                   onLanjutkanTap: () {
-                    // Aksi Lanjutkan Materi
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            IsiMateriPage(
+                          siswa: widget.siswa,
+                          judulMateri: 'Descriptive Text',
+                        ),
+                        transitionDuration: const Duration(milliseconds: 350),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                      ),
+                    );
                   },
                 ),
 
@@ -203,7 +232,17 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
                     );
                   },
                   onListeningTap: () {
-                    // Navigasi ke Listening
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            ListeningSiswaPage(siswa: widget.siswa),
+                        transitionDuration: const Duration(milliseconds: 350),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                      ),
+                    );
                   },
                   onGamesTap: () {
                     Navigator.pushReplacement(
