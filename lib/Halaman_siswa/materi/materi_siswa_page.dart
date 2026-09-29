@@ -6,6 +6,7 @@ import '../beranda/beranda_siswa_page.dart';
 import '../quiz/quiz_siswa_page.dart';
 import '../game/game_siswa_page.dart';
 import '../profil/profil_siswa_page.dart';
+import '../pencapaian/pencapaian_siswa_page.dart';
 import '../beranda/sections/bottom_nav_bar_section.dart';
 import 'sections/materi_filter_section.dart';
 import 'sections/materi_header_section.dart';
@@ -13,6 +14,7 @@ import 'sections/materi_hero_section.dart';
 import 'sections/materi_lanjutkan_section.dart';
 import 'sections/materi_list_section.dart';
 import 'sections/materi_search_section.dart';
+import 'isi_materi/isi_materi_page.dart';
 
 /// Halaman Materi Pembelajaran Siswa.
 /// Disusun secara modular menggunakan arsitektur sections/partials,
@@ -153,6 +155,19 @@ class _MateriSiswaPageState extends State<MateriSiswaPage> {
         ),
       );
     } else if (index == 4) {
+      // Ke Halaman Pencapaian
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              PencapaianSiswaPage(siswa: widget.siswa),
+          transitionDuration: const Duration(milliseconds: 350),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      );
+    } else if (index == 5) {
       // Ke Halaman Profil
       Navigator.pushReplacement(
         context,
@@ -257,10 +272,19 @@ class _MateriSiswaPageState extends State<MateriSiswaPage> {
                   description:
                       'Memahami apa itu Descriptive text dan mengetahui fungsi dan tujuannya',
                   onLanjutkanTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Membuka materi Descriptive Text...'),
-                        duration: Duration(seconds: 2),
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            IsiMateriPage(
+                          siswa: widget.siswa,
+                          judulMateri: 'Descriptive Text',
+                        ),
+                        transitionDuration: const Duration(milliseconds: 350),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
                       ),
                     );
                   },
@@ -284,10 +308,19 @@ class _MateriSiswaPageState extends State<MateriSiswaPage> {
                 MateriListSection(
                   items: _filteredMateri,
                   onMulaiBelajar: (item) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Memulai materi ${item.title}...'),
-                        duration: const Duration(seconds: 2),
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            IsiMateriPage(
+                          siswa: widget.siswa,
+                          judulMateri: item.title,
+                        ),
+                        transitionDuration: const Duration(milliseconds: 350),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
                       ),
                     );
                   },
