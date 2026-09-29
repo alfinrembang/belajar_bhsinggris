@@ -40,14 +40,16 @@ class _PencapaianSiswaPageState extends State<PencapaianSiswaPage> {
       ),
       backgroundColor: const Color(0xFFF7FAFE),
       bottomNavigationBar: BottomNavBarSection(
-        currentIndex: -1, // Tidak ada yang aktif di nav bawah (Pencapaian ada di sidebar)
+        currentIndex: 4, // Tab Pencapaian Aktif (Index 4)
         onTap: (index) {
+          if (index == 4) return; // Sudah di halaman pencapaian
+
           if (index == 0) {
             Navigator.pushReplacement(
               context,
               PageRouteBuilder(
                 pageBuilder: (c, a, s) => BerandaSiswaPage(siswa: widget.siswa),
-                transitionDuration: const Duration(milliseconds: 400),
+                transitionDuration: const Duration(milliseconds: 350),
                 transitionsBuilder: (c, a, s, child) =>
                     FadeTransition(opacity: a, child: child),
               ),
@@ -57,7 +59,7 @@ class _PencapaianSiswaPageState extends State<PencapaianSiswaPage> {
               context,
               PageRouteBuilder(
                 pageBuilder: (c, a, s) => MateriSiswaPage(siswa: widget.siswa),
-                transitionDuration: const Duration(milliseconds: 400),
+                transitionDuration: const Duration(milliseconds: 350),
                 transitionsBuilder: (c, a, s, child) =>
                     FadeTransition(opacity: a, child: child),
               ),
@@ -67,7 +69,7 @@ class _PencapaianSiswaPageState extends State<PencapaianSiswaPage> {
               context,
               PageRouteBuilder(
                 pageBuilder: (c, a, s) => QuizSiswaPage(siswa: widget.siswa),
-                transitionDuration: const Duration(milliseconds: 400),
+                transitionDuration: const Duration(milliseconds: 350),
                 transitionsBuilder: (c, a, s, child) =>
                     FadeTransition(opacity: a, child: child),
               ),
@@ -77,17 +79,18 @@ class _PencapaianSiswaPageState extends State<PencapaianSiswaPage> {
               context,
               PageRouteBuilder(
                 pageBuilder: (c, a, s) => GameSiswaPage(siswa: widget.siswa),
-                transitionDuration: const Duration(milliseconds: 400),
+                transitionDuration: const Duration(milliseconds: 350),
                 transitionsBuilder: (c, a, s, child) =>
                     FadeTransition(opacity: a, child: child),
               ),
             );
-          } else if (index == 4) {
+          } else if (index == 5) {
+            // Ke Halaman Profil (Index 5)
             Navigator.pushReplacement(
               context,
               PageRouteBuilder(
                 pageBuilder: (c, a, s) => ProfilSiswaPage(siswa: widget.siswa),
-                transitionDuration: const Duration(milliseconds: 400),
+                transitionDuration: const Duration(milliseconds: 350),
                 transitionsBuilder: (c, a, s, child) =>
                     FadeTransition(opacity: a, child: child),
               ),
