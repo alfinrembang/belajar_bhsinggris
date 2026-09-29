@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../Auth/login_siswa.dart';
 import '../Halaman_siswa/beranda/beranda_siswa_page.dart';
@@ -344,7 +344,7 @@ class StudentSidebar extends StatelessWidget {
                     context: context,
                     title: 'Pencapaian',
                     icon: Icons.emoji_events_rounded,
-                    iconColor: const Color(0xFFEAB308),
+                    iconColor: const Color(0xFFCA8A04),
                     iconBgColor: const Color(0xFFFEF9C3),
                     isActive: activeMenu.toLowerCase() == 'pencapaian',
                     onTap: () {

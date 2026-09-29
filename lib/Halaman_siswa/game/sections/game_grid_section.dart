@@ -12,6 +12,7 @@ class GameItemData {
   final Color themeColor;
   final Color badgeColor;
   final String badgeText;
+  final IconData? customIcon;
 
   const GameItemData({
     required this.id,
@@ -21,6 +22,7 @@ class GameItemData {
     required this.themeColor,
     required this.badgeColor,
     this.badgeText = 'Tt Kata',
+    this.customIcon,
   });
 }
 
@@ -108,15 +110,17 @@ class GameGridSection extends StatelessWidget {
                     size: 44,
                     borderRadius: BorderRadius.circular(14),
                     customBgColor: item.themeColor,
-                    child: Text(
-                      'T',
-                      style: GoogleFonts.poppins(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        height: 1.1,
-                      ),
-                    ),
+                    child: item.customIcon != null
+                        ? Icon(item.customIcon, color: Colors.white, size: 24)
+                        : Text(
+                            'T',
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              height: 1.1,
+                            ),
+                          ),
                   ),
 
                   // Pill Badge Menggunakan MateriBadge Reusable
@@ -223,10 +227,12 @@ class GameGridSection extends StatelessWidget {
                     size: 52,
                     borderRadius: BorderRadius.circular(16),
                     customBgColor: item.themeColor,
-                    child: Text(
-                      'T',
-                      style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white),
-                    ),
+                    child: item.customIcon != null
+                        ? Icon(item.customIcon, color: Colors.white, size: 28)
+                        : Text(
+                            'T',
+                            style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white),
+                          ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(

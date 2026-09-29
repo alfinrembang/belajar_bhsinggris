@@ -1,47 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Section Header Halaman Pencapaian: Tombol Kembali & Judul "Pencapaian".
+/// Header Section halaman Pencapaian.
+/// Menampilkan tombol hamburger menu dan judul "Pencapaian".
 class PencapaianHeaderSection extends StatelessWidget {
-  final VoidCallback? onBackTap;
+  final VoidCallback onMenuTap;
 
   const PencapaianHeaderSection({
     super.key,
-    this.onBackTap,
+    required this.onMenuTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onBackTap ?? () => Navigator.of(context).pop(),
-            borderRadius: BorderRadius.circular(12),
-            child: const Padding(
-              padding: EdgeInsets.all(8),
+        // Tombol Hamburger Menu (buka Sidebar)
+        GestureDetector(
+          onTap: onMenuTap,
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0E4E93).withValues(alpha: 0.10),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Center(
               child: Icon(
-                Icons.arrow_back_rounded,
-                color: Color(0xFF0F172A),
-                size: 24,
+                Icons.menu_rounded,
+                color: Color(0xFF0E4E93),
+                size: 20,
               ),
             ),
           ),
         ),
-        Expanded(
-          child: Text(
-            'Pencapaian',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F172A),
-            ),
+
+        const SizedBox(width: 14),
+
+        // Judul Halaman
+        Text(
+          'Pencapaian',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
         ),
-        // Spacer penyeimbang tombol back
-        const SizedBox(width: 40),
+
+        const Spacer(),
       ],
     );
   }

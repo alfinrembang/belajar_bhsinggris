@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
-import '../../../models/siswa_model.dart';
+import '../../models/siswa_model.dart';
+import '../../widgets/student_background.dart';
+import '../../widgets/student_sidebar.dart';
+import '../beranda/sections/bottom_nav_bar_section.dart';
 import '../beranda/beranda_siswa_page.dart';
 import '../materi/materi_siswa_page.dart';
 import '../quiz/quiz_siswa_page.dart';
 import '../game/game_siswa_page.dart';
 import '../profil/profil_siswa_page.dart';
-import '../beranda/sections/bottom_nav_bar_section.dart';
-import '../../../widgets/pencapaian_badge_icon.dart';
+import 'detail_pencapaian_page.dart';
 import 'sections/pencapaian_header_section.dart';
-import 'sections/pencapaian_stats_section.dart';
-import 'sections/pencapaian_progress_section.dart';
+import 'sections/pencapaian_summary_section.dart';
 import 'sections/pencapaian_filter_section.dart';
 import 'sections/pencapaian_list_section.dart';
-import 'sections/pencapaian_info_banner_section.dart';
 
-/// Halaman Pencapaian Siswa: Menampilkan Prestasi, Lencana, Progres, & Filter.
+/// Halaman Pencapaian / Achievement Siswa.
+/// Menampilkan daftar lencana prestasi dengan filter dan progress keseluruhan.
+/// Disusun secara modular menggunakan konsep sections/partials.
 class PencapaianSiswaPage extends StatefulWidget {
   final SiswaModel? siswa;
 
@@ -25,211 +27,143 @@ class PencapaianSiswaPage extends StatefulWidget {
 }
 
 class _PencapaianSiswaPageState extends State<PencapaianSiswaPage> {
-  final int _selectedNavIndex = 4; // Tab Pencapaian Aktif (Index 4)
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String _activeFilter = 'Semua';
-
-  // Mock data lencana sesuai mockup visual
-  final List<LencanaItem> _allLencana = const [
-    LencanaItem(
-      id: '1',
-      title: 'Top 10 RPL 1',
-      description: 'Masuk peringkat 10 besar\nRPL 1 di kelas',
-      info: 'Okt 2024',
-      badgeType: BadgeType.trophy,
-      isUnlocked: true,
-      isRare: true,
-    ),
-    LencanaItem(
-      id: '2',
-      title: 'Early Bird',
-      description: 'Belajar sebelum jam 06:00\nselama 7 hari',
-      info: '06:00 WIB',
-      badgeType: BadgeType.earlyBird,
-      isUnlocked: true,
-      isRare: false,
-    ),
-    LencanaItem(
-      id: '3',
-      title: 'Streak King',
-      description: 'Belajar 7 hari berturut-turut\ntanpa absen',
-      info: 'Minggu lalu',
-      badgeType: BadgeType.streakKing,
-      isUnlocked: true,
-      isRare: true,
-    ),
-    LencanaItem(
-      id: '4',
-      title: 'Bug Hunter',
-      description: 'Melaporkan 10 bug atau\nmasalah di aplikasi',
-      info: '50 Glosarium',
-      badgeType: BadgeType.bugHunter,
-      isUnlocked: true,
-      isRare: false,
-    ),
-    LencanaItem(
-      id: '5',
-      title: 'Score 100',
-      description: 'Mendapatkan nilai 100 pada\nQuiz Modul 3',
-      info: 'Quiz Modul 3',
-      badgeType: BadgeType.score100,
-      isUnlocked: true,
-      isRare: false,
-    ),
-    LencanaItem(
-      id: '6',
-      title: 'TOEIC 550+',
-      description: 'Mencapai skor TOEIC\nminimal 550',
-      info: 'Terkunci',
-      badgeType: BadgeType.locked,
-      isUnlocked: false,
-      isRare: true,
-    ),
-  ];
-
-  List<LencanaItem> get _filteredLencana {
-    if (_activeFilter.toLowerCase() == 'terbuka') {
-      return _allLencana.where((item) => item.isUnlocked).toList();
-    } else if (_activeFilter.toLowerCase() == 'terkunci') {
-      return _allLencana.where((item) => !item.isUnlocked).toList();
-    } else if (_activeFilter.toLowerCase() == 'langka') {
-      return _allLencana.where((item) => item.isRare).toList();
-    }
-    return _allLencana;
-  }
-
-  void _navigateToNavIndex(int index) {
-    if (index == _selectedNavIndex) return;
-
-    if (index == 0) {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (c, a, s) => BerandaSiswaPage(siswa: widget.siswa),
-          transitionDuration: const Duration(milliseconds: 350),
-          transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
-        ),
-      );
-    } else if (index == 1) {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (c, a, s) => MateriSiswaPage(siswa: widget.siswa),
-          transitionDuration: const Duration(milliseconds: 350),
-          transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
-        ),
-      );
-    } else if (index == 2) {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (c, a, s) => QuizSiswaPage(siswa: widget.siswa),
-          transitionDuration: const Duration(milliseconds: 350),
-          transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
-        ),
-      );
-    } else if (index == 3) {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (c, a, s) => GameSiswaPage(siswa: widget.siswa),
-          transitionDuration: const Duration(milliseconds: 350),
-          transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
-        ),
-      );
-    } else if (index == 5) {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (c, a, s) => ProfilSiswaPage(siswa: widget.siswa),
-          transitionDuration: const Duration(milliseconds: 350),
-          transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      bottomNavigationBar: BottomNavBarSection(
-        currentIndex: _selectedNavIndex,
-        onTap: _navigateToNavIndex,
+      key: _scaffoldKey,
+      drawer: StudentSidebar(
+        siswa: widget.siswa,
+        activeMenu: 'Pencapaian',
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-
-              // 1. Header Section: Tombol Back & Judul "Pencapaian"
-              PencapaianHeaderSection(
-                onBackTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (c, a, s) => BerandaSiswaPage(siswa: widget.siswa),
-                      transitionDuration: const Duration(milliseconds: 300),
-                      transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
-                    ),
-                  );
-                },
+      backgroundColor: const Color(0xFFF7FAFE),
+      bottomNavigationBar: BottomNavBarSection(
+        currentIndex: -1, // Tidak ada yang aktif di nav bawah (Pencapaian ada di sidebar)
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (c, a, s) => BerandaSiswaPage(siswa: widget.siswa),
+                transitionDuration: const Duration(milliseconds: 400),
+                transitionsBuilder: (c, a, s, child) =>
+                    FadeTransition(opacity: a, child: child),
               ),
-
-              const SizedBox(height: 18),
-
-              // 2. Stats Section: Lencana Terbuka (5) & Terkunci (8)
-              const PencapaianStatsSection(
-                totalTerbuka: 5,
-                totalTerkunci: 8,
+            );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (c, a, s) => MateriSiswaPage(siswa: widget.siswa),
+                transitionDuration: const Duration(milliseconds: 400),
+                transitionsBuilder: (c, a, s, child) =>
+                    FadeTransition(opacity: a, child: child),
               ),
-
-              const SizedBox(height: 14),
-
-              // 3. Progress Section: Progress Keseluruhan 5 / 13
-              const PencapaianProgressSection(
-                totalTerbuka: 5,
-                totalLencana: 13,
+            );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (c, a, s) => QuizSiswaPage(siswa: widget.siswa),
+                transitionDuration: const Duration(milliseconds: 400),
+                transitionsBuilder: (c, a, s, child) =>
+                    FadeTransition(opacity: a, child: child),
               ),
-
-              const SizedBox(height: 16),
-
-              // 4. Filter Chips Section: Semua, Terbuka, Terkunci, Langka
-              PencapaianFilterSection(
-                selectedFilter: _activeFilter,
-                onFilterChanged: (filter) {
-                  setState(() {
-                    _activeFilter = filter;
-                  });
-                },
+            );
+          } else if (index == 3) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (c, a, s) => GameSiswaPage(siswa: widget.siswa),
+                transitionDuration: const Duration(milliseconds: 400),
+                transitionsBuilder: (c, a, s, child) =>
+                    FadeTransition(opacity: a, child: child),
               ),
-
-              const SizedBox(height: 14),
-
-              // 5. List Lencana Section
-              PencapaianListSection(
-                items: _filteredLencana,
-                onTapItem: (item) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Lencana ${item.title} (${item.isUnlocked ? 'Terbuka' : 'Terkunci'})'),
-                      duration: const Duration(milliseconds: 1500),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
+            );
+          } else if (index == 4) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (c, a, s) => ProfilSiswaPage(siswa: widget.siswa),
+                transitionDuration: const Duration(milliseconds: 400),
+                transitionsBuilder: (c, a, s, child) =>
+                    FadeTransition(opacity: a, child: child),
               ),
+            );
+          }
+        },
+      ),
+      body: StudentBackground(
+        child: SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
 
-              const SizedBox(height: 14),
+                // 1. Header Section (Menu Hamburger + Judul Pencapaian)
+                PencapaianHeaderSection(
+                  onMenuTap: () {
+                    _scaffoldKey.currentState?.openDrawer();
+                  },
+                ),
 
-              // 6. Info Banner Section (Motivasi Bawah)
-              const PencapaianInfoBannerSection(),
+                const SizedBox(height: 36),
 
-              const SizedBox(height: 24),
-            ],
+                // 2. Ringkasan Lencana (Terbuka & Terkunci + Progress)
+                const PencapaianSummarySection(
+                  totalTerbuka: 5,
+                  totalTerkunci: 8,
+                  selesai: 5,
+                  totalLencana: 13,
+                ),
+
+                const SizedBox(height: 18),
+
+                // 3. Filter Tabs (Semua, Terbuka, Terkunci, Langka)
+                PencapaianFilterSection(
+                  activeFilter: _activeFilter,
+                  onFilterChanged: (filter) {
+                    setState(() {
+                      _activeFilter = filter;
+                    });
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // 4. Daftar Pencapaian / Lencana
+                PencapaianListSection(
+                  activeFilter: _activeFilter,
+                  onItemTap: (item) {
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (c, a, s) => DetailPencapaianPage(
+                          title: item.title,
+                          description: item.description,
+                          info: item.info,
+                          status: item.status,
+                          icon: item.icon,
+                          iconColor: item.iconColor,
+                          iconBgColor: item.iconBgColor,
+                        ),
+                        transitionDuration: const Duration(milliseconds: 400),
+                        transitionsBuilder: (c, a, s, child) =>
+                            FadeTransition(opacity: a, child: child),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
