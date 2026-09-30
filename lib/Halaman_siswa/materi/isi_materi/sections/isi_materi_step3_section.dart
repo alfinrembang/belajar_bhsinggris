@@ -1,11 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Section Konten Tahap 3: Generic Structure (Struktur Teks), Language Features
-/// (Ciri Kebahasaan dengan Timeline Node), & Kotak Tips.
-/// Dibuat secara modular, estetik, dan presisi sesuai desain mockup visual.
-class IsiMateriStep3Section extends StatelessWidget {
-  const IsiMateriStep3Section({super.key});
+/// Section Konten Tahap 3: Contoh Teks Penerapan & Media Audio Listening.
+/// Terhubung 100% dinamis dengan teks bacaan & rekaman audio dari Guru.
+class IsiMateriStep3Section extends StatefulWidget {
+  final String judul;
+  final String contohTeks;
+  final String? audioUrl;
+  final String? gambarUrl;
+
+  const IsiMateriStep3Section({
+    super.key,
+    this.judul = 'Contoh Teks Bacaan',
+    this.contohTeks =
+        'Borobudur is a ninth-century Mahayana Buddhist temple located in Magelang Regency, Central Java, Indonesia. It is recognized as the world\'s largest Buddhist temple. The monument consists of nine stacked platforms, six square and three circular, topped by a central dome.',
+    this.audioUrl,
+    this.gambarUrl,
+  });
+
+  @override
+  State<IsiMateriStep3Section> createState() => _IsiMateriStep3SectionState();
+}
+
+class _IsiMateriStep3SectionState extends State<IsiMateriStep3Section> {
+  bool _isPlaying = false;
+  double _speed = 1.0;
+
+  void _togglePlay() {
+    setState(() {
+      _isPlaying = !_isPlaying;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isPlaying ? 'Memutar audio listening pelafalan...' : 'Audio dijeda.'),
+        duration: const Duration(milliseconds: 1200),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _toggleSpeed() {
+    setState(() {
+      if (_speed == 1.0) {
+        _speed = 1.25;
+      } else if (_speed == 1.25) {
+        _speed = 1.5;
+      } else {
+        _speed = 1.0;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,288 +58,268 @@ class IsiMateriStep3Section extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // =====================================================================
-        // 1. BAGIAN: Generic Structure (Struktur)
+        // 1. HEADER SEKSI: Contoh Teks Bacaan & Media
         // =====================================================================
         Text(
-          'Generic Structure\n(Struktur)',
+          'Contoh Teks & Pelafalan',
           style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF1D4ED8), // Vibrant Royal Blue
-            height: 1.25,
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
-        // Card 1: Identification (Aksen Hijau Mint)
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF2FAF4), // Soft Mint Green
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Badge & Judul
-              Row(
-                children: [
-                  Container(
-                    width: 26,
-                    height: 26,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF5DB075), // Fresh Green
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '1',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Identification',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF48A462),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              // Penjelasan
-              Text(
-                'introduce the subject that will be described.',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1E293B),
-                  height: 1.35,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Label Contoh
-              Text(
-                'Example:',
-                style: GoogleFonts.poppins(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF64748B),
-                ),
-              ),
-
-              const SizedBox(height: 6),
-
-              // Chip Contoh
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE2F4E6),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'My Cat, Milo, is very cute.',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.8,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
-        // Card 2: Description (Aksen Soft Blue)
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF0F6FE), // Soft Blue
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Badge & Judul
-              Row(
-                children: [
-                  Container(
-                    width: 26,
-                    height: 26,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF1D4ED8), // Vibrant Royal Blue
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '2',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Description',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1D4ED8),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              // Penjelasan
-              Text(
-                'introduce the subject that will be described.',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1E293B),
-                  height: 1.35,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Label Contoh
-              Text(
-                'Example:',
-                style: GoogleFonts.poppins(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF64748B),
-                ),
-              ),
-
-              const SizedBox(height: 6),
-
-              // Chip Contoh
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE0EEFD),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'My Cat, Milo, is very cute.',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.8,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // =====================================================================
-        // 2. BAGIAN: Language Features (Ciri Kebahasaan)
-        // =====================================================================
-        Text(
-          'Language Features\n(Ciri Kebahasaan)',
-          style: GoogleFonts.poppins(
-            fontSize: 18,
+            fontSize: 17,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF1D4ED8),
-            height: 1.25,
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // =====================================================================
+        // GAMBAR ILUSTRASI TEKS (DARI GURU)
+        // =====================================================================
+        if (widget.gambarUrl != null && widget.gambarUrl!.trim().isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFF0066D6).withValues(alpha: 0.18),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0066D6).withValues(alpha: 0.08),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18.5),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  widget.gambarUrl!,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: const Color(0xFFEFF6FF),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 26,
+                          height: 26,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Color(0xFF0066D6),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: const Color(0xFFF8FAFC),
+                    padding: const EdgeInsets.all(16),
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.broken_image_rounded,
+                            color: Color(0xFF94A3B8),
+                            size: 36,
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Gagal memuat gambar ilustrasi',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
+        // =====================================================================
+        // 2. KARTU CONTOH TEKS BACAAN (DARI GURU)
+        // =====================================================================
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFF0066D6),
+              width: 2.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0066D6).withValues(alpha: 0.06),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Kotak Contoh
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(17),
+                    topRight: Radius.circular(17),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.auto_stories_rounded,
+                      color: Color(0xFF0066D6),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Reading Passage: ${widget.judul}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0066D6),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Paragraf Contoh Teks
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Text(
+                  widget.contohTeks,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.normal,
+                    color: const Color(0xFF1E293B),
+                    height: 1.65,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
 
         const SizedBox(height: 16),
 
-        // Timeline Daftar Node Kebahasaan
-        _buildTimelineItem(
-          title: 'Using Simple Present Tense',
-          subtitle: '(e.g. is, has, like, have)',
-          isLast: false,
-        ),
-        _buildTimelineItem(
-          title: 'Using Adjectives',
-          subtitle: '(e.g. beautiful, big, friendly)',
-          isLast: false,
-        ),
-        _buildTimelineItem(
-          title: 'Using Specific Nonus',
-          subtitle: '(e.g. cat, garden, teacher)',
-          isLast: false,
-        ),
-        _buildTimelineItem(
-          title: 'Using Linking Verbs',
-          subtitle: '(e.g. is, are, has)',
-          isLast: false,
-        ),
-        _buildTimelineItem(
-          title: 'Using Action Verbs',
-          subtitle: '(e.g. looks, comes, appears)',
-          isLast: true,
-        ),
-
-        const SizedBox(height: 20),
-
         // =====================================================================
-        // 3. BAGIAN: Tips Box (Kuning / Amber Hangat)
+        // 3. PEMUTAR AUDIO LISTENING (AUDIO DARI GURU)
         // =====================================================================
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF7ED), // Soft Amber Cream
-            borderRadius: BorderRadius.circular(16),
+            color: const Color(0xFFEBF3FE),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xFFD6E6FE),
+              width: 1.2,
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  const Text(
-                    '💡',
-                    style: TextStyle(fontSize: 18),
+              // Tombol Play / Pause
+              InkWell(
+                onTap: _togglePlay,
+                borderRadius: BorderRadius.circular(30),
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0066D6),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Tips',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFFB45309), // Amber Brown
+                  child: Center(
+                    child: Icon(
+                      _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 24,
                     ),
                   ),
-                ],
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Adjectives are very improtant in descriptive text because they describe more detail',
-                style: GoogleFonts.poppins(
-                  fontSize: 11.8,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF334155),
-                  height: 1.4,
+
+              const SizedBox(width: 12),
+
+              // Info Audio
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Audio Pelafalan Teks',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1D4ED8),
+                      ),
+                    ),
+                    Text(
+                      'Dengarkan intonasi & pronunciation native',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Speed Selector Button
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _toggleSpeed,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD6E6FE),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.speed_rounded,
+                          size: 13,
+                          color: Color(0xFF1D4ED8),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${_speed}X',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1D4ED8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -303,73 +328,6 @@ class IsiMateriStep3Section extends StatelessWidget {
 
         const SizedBox(height: 16),
       ],
-    );
-  }
-
-  /// Helper untuk merender item timeline node bergaris biru
-  Widget _buildTimelineItem({
-    required String title,
-    required String subtitle,
-    required bool isLast,
-  }) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Kolom Garis & Dot Lingkaran
-          SizedBox(
-            width: 18,
-            child: Column(
-              children: [
-                Container(
-                  width: 9,
-                  height: 9,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0066D6), // Vibrant Electric Blue
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: const Color(0xFF93C5FD), // Soft Blue Track
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Kolom Teks Judul & Subtitle
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12.2,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.poppins(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

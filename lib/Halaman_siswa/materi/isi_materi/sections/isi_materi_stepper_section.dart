@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Section Stepper Progres: Menampilkan Teks "Materi X Dari Y" & Garis Tahapan Ber-node.
+/// Section Stepper Progres: Menampilkan Teks "Materi X Dari Y" & Garis Tahapan Ber-node Dinamis.
+/// Garis dan titik tahapan otomatis berwarna biru untuk tahap yang aktif/dilewati,
+/// dan abu-abu lembut untuk tahap berikutnya.
 class IsiMateriStepperSection extends StatelessWidget {
   final int currentStep;
   final int totalSteps;
@@ -17,7 +19,7 @@ class IsiMateriStepperSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. Teks Label "Materi 1 Dari 4"
+        // 1. Teks Label "Materi X Dari Y"
         RichText(
           text: TextSpan(
             style: GoogleFonts.poppins(
@@ -40,44 +42,81 @@ class IsiMateriStepperSection extends StatelessWidget {
 
         const SizedBox(height: 10),
 
-        // 2. Bar Garis Progres dengan 4 Titik Node Lingkaran
+        // 2. Bar Garis Progres Dinamis dengan Titik Node Lingkaran
         SizedBox(
           height: 14,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Garis Track Utama (Biru Halus & Modern)
-              Container(
-                height: 4,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0066D6),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final double progress = totalSteps > 1
+                  ? ((currentStep - 1) / (totalSteps - 1)).clamp(0.0, 1.0)
+                  : 1.0;
 
-              // Titik-titik Node Sesuai Jumlah Langkah
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(totalSteps, (index) {
-                  final stepIndex = index + 1;
-                  final isActive = stepIndex <= currentStep;
-
-                  return Container(
-                    width: 10,
-                    height: 10,
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Garis Track Abu-abu Penuh (Tahap yang Belum Terlewati)
+                  Container(
+                    height: 4,
+                    width: double.infinity,
                     decoration: BoxDecoration(
-                      color: isActive ? Colors.white : const Color(0xFFE2E8F0),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF0066D6),
-                        width: 2,
+                      color: const Color(0xFFE2E8F0), // Soft Inactive Gray
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  // Garis Track Biru Dinamis (Tahap yang Sudah Terlewati / Aktif)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 320),
+                      curve: Curves.easeInOut,
+                      height: 4,
+                      width: constraints.maxWidth * progress,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0066D6), // Vibrant Active Blue
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  );
-                }),
-              ),
-            ],
+                  ),
+
+                  // Titik-titik Node Sesuai Jumlah Langkah
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(totalSteps, (index) {
+                      final stepIndex = index + 1;
+                      final isPassedOrCurrent = stepIndex <= currentStep;
+                      final isCurrent = stepIndex == currentStep;
+
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isPassedOrCurrent
+                                ? const Color(0xFF0066D6) // Active Blue Border
+                                : const Color(0xFFCBD5E1), // Inactive Gray Border
+                            width: 2,
+                          ),
+                          boxShadow: isCurrent
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(0xFF0066D6)
+                                        .withValues(alpha: 0.35),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ],
