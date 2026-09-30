@@ -1,3 +1,4 @@
+import '../../services/api_service.dart';
 import 'package:flutter/material.dart';
 import '../../models/siswa_model.dart';
 import '../../widgets/student_background.dart';
@@ -32,6 +33,53 @@ class BerandaSiswaPage extends StatefulWidget {
 class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedNavIndex = 0;
+
+  // State Progres Belajar Dinamis dari Server
+  int _persenProgres = 0;
+  int _unitSelesai = 0;
+  int _totalUnit = 4;
+  int? _lanjutkanMateriId;
+  String _judulLanjutkan = 'Descriptive Text: Describing Famous Places';
+  String _subjudulLanjutkan = 'Materi belajar bahasa Inggris';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProgres();
+  }
+
+  /// Mengambil data progres belajar aktual siswa dari API Laravel
+  Future<void> _fetchProgres() async {
+    final res = await ApiService.getProgresMateri(
+      siswaId: widget.siswa?.id,
+    );
+
+    if (!mounted) return;
+
+    if (res['success'] == true && res['data'] != null) {
+      final data = res['data'] as Map<String, dynamic>;
+      setState(() {
+        _persenProgres = (data['persentase'] is int)
+            ? data['persentase'] as int
+            : (int.tryParse(data['persentase']?.toString() ?? '') ?? 0);
+        _unitSelesai = (data['materi_selesai'] is int)
+            ? data['materi_selesai'] as int
+            : (int.tryParse(data['materi_selesai']?.toString() ?? '') ?? 0);
+        _totalUnit = (data['total_materi'] is int && (data['total_materi'] as int) > 0)
+            ? data['total_materi'] as int
+            : (int.tryParse(data['total_materi']?.toString() ?? '') ?? 4);
+
+        final materiLanjut = data['materi_lanjutkan'] as Map<String, dynamic>? ??
+            data['materi_terakhir'] as Map<String, dynamic>?;
+        if (materiLanjut != null) {
+          _lanjutkanMateriId = int.tryParse(materiLanjut['id']?.toString() ?? '');
+          _judulLanjutkan = materiLanjut['judul']?.toString() ?? _judulLanjutkan;
+          _subjudulLanjutkan = materiLanjut['deskripsi_singkat']?.toString() ??
+              (_unitSelesai > 0 ? 'Lanjutkan modul berikutnya' : 'Mulai belajar bahasa Inggris');
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,23 +213,36 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
 
                 const SizedBox(height: 18),
 
-                // 3. Progres Belajar Section (70%, Unit 4 dari 6 Selesai)
+                // 3. Progres Belajar Section (Dinamis Sesuai Materi Selesai)
                 ProgresBelajarSection(
-                  persen: 70,
-                  unitSelesai: 4,
-                  totalUnit: 6,
+                  persen: _persenProgres,
+                  unitSelesai: _unitSelesai,
+                  totalUnit: _totalUnit,
                   onDetailTap: () {
-                    // Aksi Lihat Detail Progres
+                    // Buka Halaman Materi Lengkap
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            MateriSiswaPage(siswa: widget.siswa),
+                        transitionDuration: const Duration(milliseconds: 400),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                      ),
+                    ).then((_) => _fetchProgres());
                   },
                 ),
 
                 const SizedBox(height: 18),
 
-                // 4. Lanjutkan Belajar Section (Descriptive Text & Tombol Lanjutkan)
+                // 4. Lanjutkan Belajar Section (Dinamis Sesuai Materi Rekomendasi/Terakhir)
                 LanjutkanBelajarSection(
-                  judulMateri: 'Descriptive Text',
-                  subjudul: 'Materi terakhir yang kamu pelajari',
-                  persen: 70,
+                  judulMateri: _judulLanjutkan,
+                  subjudul: _unitSelesai >= _totalUnit
+                      ? 'Semua materi telah diselesaikan! 🎉'
+                      : _subjudulLanjutkan,
+                  persen: _persenProgres,
                   onLanjutkanTap: () {
                     Navigator.push(
                       context,
@@ -189,7 +250,8 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
                         pageBuilder: (context, animation, secondaryAnimation) =>
                             IsiMateriPage(
                           siswa: widget.siswa,
-                          judulMateri: 'Descriptive Text',
+                          materiId: _lanjutkanMateriId,
+                          judulMateri: _judulLanjutkan,
                         ),
                         transitionDuration: const Duration(milliseconds: 350),
                         transitionsBuilder:
@@ -197,7 +259,7 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
                           return FadeTransition(opacity: animation, child: child);
                         },
                       ),
-                    );
+                    ).then((_) => _fetchProgres());
                   },
                 ),
 

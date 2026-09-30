@@ -109,7 +109,7 @@ class ProgresBelajarSection extends StatelessWidget {
 
           // 2. Angka Persentase Besar
           Text(
-            '%',
+            '$persen%',
             style: GoogleFonts.poppins(
               fontSize: 24,
               fontWeight: FontWeight.w800,
@@ -121,7 +121,7 @@ class ProgresBelajarSection extends StatelessWidget {
 
           const SizedBox(height: 4),
 
-          // 3. Subteks: Unit 4 dari 6 Selesai
+          // 3. Subteks: Unit X dari Y Selesai
           Row(
             children: [
               const Icon(
@@ -131,7 +131,7 @@ class ProgresBelajarSection extends StatelessWidget {
               ),
               const SizedBox(width: 5),
               Text(
-                'Unit  dari  Selesai',
+                'Unit $unitSelesai dari $totalUnit Selesai',
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,

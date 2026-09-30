@@ -1,5 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../models/siswa_model.dart';
+import '../../../services/api_service.dart';
 import '../../../widgets/student_background.dart';
 import '../../../widgets/student_sidebar.dart';
 import '../beranda/beranda_siswa_page.dart';
@@ -16,10 +18,10 @@ import 'sections/materi_list_section.dart';
 import 'sections/materi_search_section.dart';
 import 'isi_materi/isi_materi_page.dart';
 
-/// Halaman Materi Pembelajaran Siswa.
+/// Halaman Materi Pembelajaran Siswa (100% Dinamis dari Backend Laravel).
 /// Disusun secara modular menggunakan arsitektur sections/partials,
 /// dibungkus dengan komponen latar belakang reusable (StudentBackground),
-/// dan menggunakan komponen MateriThumbnail terpusat yang konsisten dengan Beranda.
+/// dan mengambil data materi live via ApiService.
 class MateriSiswaPage extends StatefulWidget {
   final SiswaModel? siswa;
 
@@ -32,67 +34,20 @@ class MateriSiswaPage extends StatefulWidget {
 class _MateriSiswaPageState extends State<MateriSiswaPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedNavIndex = 1; // Tab Materi aktif (Index 1)
-  String _selectedCategory = 'Text';
+  String _selectedCategory = 'Semua';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  // Data master materi pembelajaran (Desain dan warna diatur otomatis oleh MateriThumbnail & MateriBadge)
-  final List<MateriItemData> _allMateri = const [
-    MateriItemData(
-      id: '1',
-      category: 'Text',
-      title: 'Descriptive Text',
-      description: 'Materi tentang descriptive text dan lain sebagainya dan apapun',
-      currentUnit: 1,
-      totalUnit: 4,
-      xp: 25,
-    ),
-    MateriItemData(
-      id: '2',
-      category: 'Text',
-      title: 'Recount Text',
-      description: 'Menceritakan kembali peristiwa masa lalu dengan urutan kronologis yang runtut',
-      currentUnit: 2,
-      totalUnit: 4,
-      xp: 25,
-    ),
-    MateriItemData(
-      id: '3',
-      category: 'Text',
-      title: 'Narrative Text',
-      description: 'Menceritakan cerita imajinatif atau dongeng untuk menghibur pembaca',
-      currentUnit: 0,
-      totalUnit: 4,
-      xp: 30,
-    ),
-    MateriItemData(
-      id: '4',
-      category: 'Grammar',
-      title: 'Simple Present Tense',
-      description: 'Penggunaan kalimat untuk menyatakan fakta, kebiasaan, dan kejadian umum',
-      currentUnit: 1,
-      totalUnit: 3,
-      xp: 20,
-    ),
-    MateriItemData(
-      id: '5',
-      category: 'Grammar',
-      title: 'Past Continuous Tense',
-      description: 'Membahas kejadian yang sedang berlangsung di masa lampau pada titik waktu tertentu',
-      currentUnit: 0,
-      totalUnit: 3,
-      xp: 20,
-    ),
-    MateriItemData(
-      id: '6',
-      category: 'Vocabulary',
-      title: 'Daily Conversation Vocab',
-      description: 'Kumpulan kosakata percakapan harian bahasa Inggris yang paling sering digunakan',
-      currentUnit: 3,
-      totalUnit: 5,
-      xp: 35,
-    ),
-  ];
+  // State Dinamis dari Backend Laravel
+  bool _isLoading = true;
+  String? _errorMessage;
+  List<MateriItemData> _materiList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMateri();
+  }
 
   @override
   void dispose() {
@@ -100,14 +55,48 @@ class _MateriSiswaPageState extends State<MateriSiswaPage> {
     super.dispose();
   }
 
-  // Filter daftar materi berdasarkan kategori dan kata kunci pencarian
+  /// Mengambil daftar materi aktual dari API Laravel
+  Future<void> _fetchMateri() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final res = await ApiService.getDaftarMateri(
+      // Muat semua materi aktif agar siswa dapat melihat seluruh materi dari guru
+      kelas: null,
+      kategori: null,
+      siswaId: widget.siswa?.id,
+    );
+
+    if (!mounted) return;
+
+    if (res['success'] == true) {
+      setState(() {
+        _materiList = (res['data'] as List<MateriItemData>?) ?? [];
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _errorMessage = res['message'] ?? 'Gagal memuat materi.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Filter daftar materi berdasarkan kategori & kata kunci pencarian
   List<MateriItemData> get _filteredMateri {
-    return _allMateri.where((item) {
-      final matchCategory = (_selectedCategory == 'All') ||
-          (item.category.toLowerCase() == _selectedCategory.toLowerCase());
+    return _materiList.where((item) {
+      final isAll = _selectedCategory == 'Semua' || _selectedCategory == 'All';
+      final matchCategory = isAll ||
+          (item.category.toLowerCase() == _selectedCategory.toLowerCase()) ||
+          (_selectedCategory.toLowerCase() == 'reading' && item.category.toLowerCase() == 'text') ||
+          (_selectedCategory.toLowerCase() == 'conversation' && item.category.toLowerCase() == 'speaking');
+
       final matchSearch = _searchQuery.isEmpty ||
           item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           item.description.toLowerCase().contains(_searchQuery.toLowerCase());
+
       return matchCategory && matchSearch;
     }).toList();
   }
@@ -187,18 +176,38 @@ class _MateriSiswaPageState extends State<MateriSiswaPage> {
     }
   }
 
+  void _openMateri(MateriItemData item) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => IsiMateriPage(
+          siswa: widget.siswa,
+          materiId: int.tryParse(item.id),
+          judulMateri: item.title,
+        ),
+        transitionDuration: const Duration(milliseconds: 350),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    ).then((_) {
+      // Refresh materi list saat kembali (jika ada update progres)
+      _fetchMateri();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Menyiapkan data profil dinamis siswa
     final namaTampil = (widget.siswa != null && widget.siswa!.namaLengkap.isNotEmpty)
         ? widget.siswa!.namaLengkap
-        : 'Budi Pratama';
+        : 'Siswa';
 
     final kelasTampil = (widget.siswa != null &&
             widget.siswa!.kelasLengkap != null &&
             widget.siswa!.kelasLengkap!.isNotEmpty)
         ? widget.siswa!.kelasLengkap!
-        : 'XII RPL 1';
+        : (widget.siswa?.kelas ?? 'Kelas 10');
 
     final noAbsenTampil = (widget.siswa != null &&
             widget.siswa!.noAbsen != null &&
@@ -208,7 +217,7 @@ class _MateriSiswaPageState extends State<MateriSiswaPage> {
                 widget.siswa!.noKelas != null &&
                 widget.siswa!.noKelas!.isNotEmpty)
             ? widget.siswa!.noKelas!
-            : '14');
+            : '-');
 
     return Scaffold(
       key: _scaffoldKey,
@@ -224,110 +233,160 @@ class _MateriSiswaPageState extends State<MateriSiswaPage> {
       body: StudentBackground(
         child: SafeArea(
           bottom: false,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
+          child: RefreshIndicator(
+            onRefresh: _fetchMateri,
+            color: const Color(0xFF0066D6),
+            backgroundColor: Colors.white,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
 
-                // 1. Header Section (Menu Hamburger, Judul "Halo, Materi", Notifikasi)
-                MateriHeaderSection(
-                  onMenuTap: () {
-                    _scaffoldKey.currentState?.openDrawer();
-                  },
-                  onNotificationTap: () {
-                    // Notifikasi
-                  },
-                ),
+                  // 1. Header Section (Menu Hamburger, Judul "Halo, Materi", Notifikasi)
+                  MateriHeaderSection(
+                    onMenuTap: () {
+                      _scaffoldKey.currentState?.openDrawer();
+                    },
+                    onNotificationTap: () {
+                      // Notifikasi
+                    },
+                  ),
 
-                const SizedBox(height: 36),
+                  const SizedBox(height: 36),
 
-                // 2. Hero Card Section (Sapaan Siswa, Badge Kelas, & Rakun Menyapa)
-                MateriHeroSection(
-                  nama: namaTampil,
-                  kelas: kelasTampil,
-                  noAbsen: noAbsenTampil,
-                ),
+                  // 2. Hero Card Section (Sapaan Siswa, Badge Kelas, & Rakun Menyapa)
+                  MateriHeroSection(
+                    nama: namaTampil,
+                    kelas: kelasTampil,
+                    noAbsen: noAbsenTampil,
+                  ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // 3. Search Bar Section ("Cari materi text, grammar dll")
-                MateriSearchSection(
-                  controller: _searchController,
-                  onChanged: (val) {
-                    setState(() {
-                      _searchQuery = val;
-                    });
-                  },
-                ),
+                  // 3. Search Bar Section ("Cari materi text, grammar dll")
+                  MateriSearchSection(
+                    controller: _searchController,
+                    onChanged: (val) {
+                      setState(() {
+                        _searchQuery = val;
+                      });
+                    },
+                  ),
 
-                const SizedBox(height: 18),
+                  const SizedBox(height: 18),
 
-                // 4. Lanjutkan Pembelajaran Section (Kartu Play & MateriThumbnail Reusable)
-                MateriLanjutkanSection(
-                  title: 'Descriptive Text',
-                  category: 'Text',
-                  description:
-                      'Memahami apa itu Descriptive text dan mengetahui fungsi dan tujuannya',
-                  onLanjutkanTap: () {
-                    Navigator.push(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (context, animation, secondaryAnimation) =>
-                            IsiMateriPage(
-                          siswa: widget.siswa,
-                          judulMateri: 'Descriptive Text',
-                        ),
-                        transitionDuration: const Duration(milliseconds: 350),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(opacity: animation, child: child);
-                        },
+                  // 4. Lanjutkan Pembelajaran Section (Dinamis dari item materi pertama jika ada)
+                  if (!_isLoading && _materiList.isNotEmpty) ...[
+                    MateriLanjutkanSection(
+                      title: _materiList.first.title,
+                      category: _materiList.first.category,
+                      description: _materiList.first.description,
+                      onLanjutkanTap: () => _openMateri(_materiList.first),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // 5. Category Filter Section (Chips: Semua, Reading, Grammar, Conversation, Vocabulary)
+                  MateriFilterSection(
+                    selectedCategory: _selectedCategory,
+                    onCategoryChanged: (cat) {
+                      setState(() {
+                        _selectedCategory = cat;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // 6. List Materi Section / Loading State / Error State
+                  if (_isLoading)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const CircularProgressIndicator(
+                            color: Color(0xFF0066D6),
+                            strokeWidth: 3,
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            'Memuat materi pembelajaran...',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // 5. Category Filter Section (Chips: Text, Grammar, Vocabulary, All)
-                MateriFilterSection(
-                  selectedCategory: _selectedCategory,
-                  onCategoryChanged: (cat) {
-                    setState(() {
-                      _selectedCategory = cat;
-                    });
-                  },
-                ),
-
-                const SizedBox(height: 18),
-
-                // 6. List Materi Section (Daftar Kartu Materi Menggunakan MateriThumbnail & MateriBadge)
-                MateriListSection(
-                  items: _filteredMateri,
-                  onMulaiBelajar: (item) {
-                    Navigator.push(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (context, animation, secondaryAnimation) =>
-                            IsiMateriPage(
-                          siswa: widget.siswa,
-                          judulMateri: item.title,
-                        ),
-                        transitionDuration: const Duration(milliseconds: 350),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(opacity: animation, child: child);
-                        },
+                    )
+                  else if (_errorMessage != null && _materiList.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFFEE2E2)),
                       ),
-                    );
-                  },
-                ),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.wifi_off_rounded,
+                            color: Color(0xFFEF4444),
+                            size: 36,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Gagal Memuat Materi',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1E293B),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.5,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          ElevatedButton.icon(
+                            onPressed: _fetchMateri,
+                            icon: const Icon(Icons.refresh_rounded, size: 16),
+                            label: const Text('Coba Lagi'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0066D6),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    MateriListSection(
+                      items: _filteredMateri,
+                      onMulaiBelajar: _openMateri,
+                    ),
 
-                const SizedBox(height: 26),
-              ],
+                  const SizedBox(height: 26),
+                ],
+              ),
             ),
           ),
         ),
