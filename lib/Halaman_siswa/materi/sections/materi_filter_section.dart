@@ -1,7 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Section Filter Materi: Menampilkan Pilihan Kategori (Text, Grammar, Vocabulary, All)
+/// Section Filter Materi: Menampilkan Pilihan Kategori (Semua, Reading, Grammar, Conversation, Vocabulary)
 /// dengan palet warna biru cerah konsisten dengan Beranda.
 class MateriFilterSection extends StatelessWidget {
   final String selectedCategory;
@@ -10,9 +10,9 @@ class MateriFilterSection extends StatelessWidget {
 
   const MateriFilterSection({
     super.key,
-    this.selectedCategory = 'Text',
+    this.selectedCategory = 'Semua',
     this.onCategoryChanged,
-    this.categories = const ['Text', 'Grammar', 'Vocabulary', 'All'],
+    this.categories = const ['Semua', 'Reading', 'Grammar', 'Conversation', 'Vocabulary'],
   });
 
   @override
@@ -22,7 +22,9 @@ class MateriFilterSection extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       child: Row(
         children: categories.map((cat) {
-          final isSelected = cat.toLowerCase() == selectedCategory.toLowerCase();
+          final isSelected = cat.toLowerCase() == selectedCategory.toLowerCase() ||
+              ((selectedCategory == 'Semua' || selectedCategory == 'All') && (cat == 'Semua' || cat == 'All'));
+
           return Padding(
             padding: const EdgeInsets.only(right: 10),
             child: InkWell(
@@ -31,7 +33,7 @@ class MateriFilterSection extends StatelessWidget {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 26,
+                  horizontal: 22,
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(

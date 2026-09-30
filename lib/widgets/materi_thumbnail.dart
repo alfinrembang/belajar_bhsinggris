@@ -57,21 +57,21 @@ class MateriCategoryTheme {
       case 'speaking':
       case 'conversation':
         return const MateriCategoryTheme(
-          icon: Icons.record_voice_over_rounded,
-          iconColor: Color(0xFF0D9488), // Teal Modern
-          bgColor: Color(0xFFCCFBF1),
-          badgeBgColor: Color(0xFFF0FDFA),
-          badgeTextColor: Color(0xFF0F766E),
+          icon: Icons.forum_rounded, // Chat / Percakapan Interaktif
+          iconColor: Color(0xFF7C3AED), // Ungu Modern (Vibrant Violet)
+          bgColor: Color(0xFFEDE9FE), // Soft Purple Background
+          badgeBgColor: Color(0xFFF5F3FF),
+          badgeTextColor: Color(0xFF7C3AED),
         );
 
       case 'listening':
       case 'audio':
         return const MateriCategoryTheme(
           icon: Icons.headphones_rounded,
-          iconColor: Color(0xFF7C3AED), // Purple / Violet
-          bgColor: Color(0xFFEDE9FE),
-          badgeBgColor: Color(0xFFF5F3FF),
-          badgeTextColor: Color(0xFF7C3AED),
+          iconColor: Color(0xFF4F46E5), // Indigo Modern
+          bgColor: Color(0xFFEEF2FF),
+          badgeBgColor: Color(0xFFF5F7FF),
+          badgeTextColor: Color(0xFF4F46E5),
         );
 
       default:
