@@ -15,7 +15,7 @@ import '../quiz/quiz_siswa_page.dart';
 import '../game/game_siswa_page.dart';
 import '../profil/profil_siswa_page.dart';
 import '../pencapaian/pencapaian_siswa_page.dart';
-import '../listening/listening_siswa_page.dart';
+import '../listening/listening_daftar_page.dart';
 import '../materi/isi_materi/isi_materi_page.dart';
 
 /// Halaman Beranda Siswa (Dashboard Utama).
@@ -298,7 +298,7 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
                       context,
                       PageRouteBuilder(
                         pageBuilder: (context, animation, secondaryAnimation) =>
-                            ListeningSiswaPage(siswa: widget.siswa),
+                            ListeningDaftarPage(siswa: widget.siswa),
                         transitionDuration: const Duration(milliseconds: 350),
                         transitionsBuilder: (context, animation, secondaryAnimation, child) {
                           return FadeTransition(opacity: animation, child: child);
