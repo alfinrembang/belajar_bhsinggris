@@ -4,10 +4,22 @@ import 'package:google_fonts/google_fonts.dart';
 /// Section Hero Banner Listening: Judul Besar "Listening", Deskripsi,
 /// dan Maskot Rakun Headphone (assets/images/rakun_listening.png).
 class ListeningHeroSection extends StatelessWidget {
-  const ListeningHeroSection({super.key});
+  final String? title;
+  final String? subtitle;
+
+  const ListeningHeroSection({
+    super.key,
+    this.title,
+    this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveTitle = (title != null && title!.trim().isNotEmpty) ? title! : 'Listening';
+    final effectiveSubtitle = (subtitle != null && subtitle!.trim().isNotEmpty)
+        ? subtitle!
+        : 'Dengarkan percakapan atau pengumuman, lalu jawab pertanyaan yang sesuai.';
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -23,24 +35,28 @@ class ListeningHeroSection extends StatelessWidget {
             children: [
               // Sisi Kiri: Teks Judul Besar "Listening" & Deskripsi
               Expanded(
-                flex: 42,
+                flex: 48,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Listening',
+                      effectiveTitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
-                        fontSize: 30,
+                        fontSize: effectiveTitle.length > 18 ? 20 : 26,
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF0056D2), // Electric Royal Blue
-                        height: 1.1,
+                        height: 1.15,
                         letterSpacing: -0.5,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Dengarkan percakapan atau pengumuman, lalu jawab pertanyaan yang sesuai.',
+                      effectiveSubtitle,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
@@ -54,24 +70,24 @@ class ListeningHeroSection extends StatelessWidget {
 
               // Sisi Kanan: Ilustrasi Maskot Rakun (Besar & Penuh Mengisi Sisi Kanan)
               Expanded(
-                flex: 58,
+                flex: 52,
                 child: Transform.scale(
-                  scale: 1.28,
+                  scale: 1.25,
                   alignment: Alignment.centerRight,
                   child: Image.asset(
                     'assets/images/rakun_listening.png',
-                    height: 205,
+                    height: 195,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return Image.asset(
                         'assets/images/rakun_materi.png',
-                        height: 205,
+                        height: 195,
                         fit: BoxFit.contain,
                         errorBuilder: (ctx, err, st) {
                           return const Center(
                             child: Icon(
                               Icons.headphones_rounded,
-                              size: 90,
+                              size: 80,
                               color: Color(0xFF0056D2),
                             ),
                           );
