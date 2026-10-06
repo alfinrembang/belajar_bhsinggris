@@ -1,18 +1,24 @@
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../services/api_service.dart';
 
 /// Reusable Widget untuk Halaman Latihan Listening (Sesuai Mockup Desain Pengguna):
 /// - Judul Biru Elektrik (Dengarkan Percakapan X)
 /// - Instruction Banner dengan Ikon Headphone
-/// - Audio Player Card (Play/Pause, Judul Audio, Timer, Seekbar, Icon Volume)
+/// - Audio Player Card Terintegrasi Hardware Audio (Play/Pause, Judul Audio, Timer, Seekbar, Icon Volume)
 /// - Pertanyaan (Nomor & Teks)
 /// - Kartu Opsi Pilihan Jawaban A, B, C, D
 class ListeningQuestionTemplate extends StatefulWidget {
   final String title;
   final String audioTitle;
   final String totalDuration;
+  final String? audioUrl;
   final int questionNumber;
+  final String? rentangSoal;
+  final int audioNomor;
+  final bool isNewAudio;
   final String questionText;
   final List<String> options;
   final int correctIndex;
@@ -25,7 +31,11 @@ class ListeningQuestionTemplate extends StatefulWidget {
     required this.title,
     required this.audioTitle,
     required this.totalDuration,
+    this.audioUrl,
     required this.questionNumber,
+    this.rentangSoal,
+    this.audioNomor = 1,
+    this.isNewAudio = false,
     required this.questionText,
     required this.options,
     required this.correctIndex,
@@ -40,22 +50,81 @@ class ListeningQuestionTemplate extends StatefulWidget {
 }
 
 class _ListeningQuestionTemplateState extends State<ListeningQuestionTemplate> {
+  late final AudioPlayer _audioPlayer;
   bool _isPlaying = false;
   bool _isMuted = false;
   double _sliderValue = 0.0;
-  Timer? _timer;
   int _currentSeconds = 0;
   late int _totalSeconds;
+
+  // Stream Subscriptions untuk Audioplayer
+  StreamSubscription? _playerStateSubscription;
+  StreamSubscription? _positionSubscription;
+  StreamSubscription? _durationSubscription;
+  StreamSubscription? _playerCompleteSubscription;
+
+  // Fallback timer jika URL audio belum siap
+  Timer? _fallbackTimer;
 
   @override
   void initState() {
     super.initState();
     _totalSeconds = _parseDuration(widget.totalDuration);
+    _initAudioPlayer();
+  }
+
+  void _initAudioPlayer() {
+    _audioPlayer = AudioPlayer();
+
+    // Dengarkan perubahan state pemutar (Playing / Paused / Stopped)
+    _playerStateSubscription = _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = state == PlayerState.playing;
+      });
+    });
+
+    // Dengarkan posisi detik pemutaran audio
+    _positionSubscription = _audioPlayer.onPositionChanged.listen((position) {
+      if (!mounted) return;
+      setState(() {
+        _currentSeconds = position.inSeconds;
+        if (_totalSeconds > 0) {
+          _sliderValue = (_currentSeconds / _totalSeconds).clamp(0.0, 1.0);
+        }
+      });
+    });
+
+    // Dengarkan total durasi audio aktual
+    _durationSubscription = _audioPlayer.onDurationChanged.listen((duration) {
+      if (!mounted) return;
+      if (duration.inSeconds > 0) {
+        setState(() {
+          _totalSeconds = duration.inSeconds;
+        });
+      }
+    });
+
+    // Reset posisi saat audio selesai berputar
+    _playerCompleteSubscription = _audioPlayer.onPlayerComplete.listen((_) {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = false;
+        _currentSeconds = 0;
+        _sliderValue = 0.0;
+      });
+    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _fallbackTimer?.cancel();
+    _playerStateSubscription?.cancel();
+    _positionSubscription?.cancel();
+    _durationSubscription?.cancel();
+    _playerCompleteSubscription?.cancel();
+    _audioPlayer.stop();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -75,35 +144,72 @@ class _ListeningQuestionTemplateState extends State<ListeningQuestionTemplate> {
     return '$m:$s';
   }
 
-  void _togglePlay() {
-    setState(() {
-      _isPlaying = !_isPlaying;
-      if (_isPlaying) {
-        _timer?.cancel();
-        _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-          if (_currentSeconds < _totalSeconds) {
-            setState(() {
-              _currentSeconds++;
-              _sliderValue = _currentSeconds / _totalSeconds;
-            });
+  Future<void> _togglePlay() async {
+    final rawUrl = widget.audioUrl?.trim() ?? '';
+
+    if (_isPlaying) {
+      // Pause pemutaran audio
+      await _audioPlayer.pause();
+      _fallbackTimer?.cancel();
+    } else {
+      if (rawUrl.isNotEmpty) {
+        // Putar audio aktual lewat AudioPlayer
+        final resolvedUrl = ApiService.resolveAudioUrl(rawUrl);
+        try {
+          if (_currentSeconds > 0 && _currentSeconds < _totalSeconds) {
+            await _audioPlayer.resume();
           } else {
-            _timer?.cancel();
-            setState(() {
-              _isPlaying = false;
-              _currentSeconds = 0;
-              _sliderValue = 0.0;
-            });
+            await _audioPlayer.play(UrlSource(resolvedUrl));
           }
+        } catch (e) {
+          debugPrint('Gagal memutar audio: $e');
+          _startFallbackTimer();
+        }
+      } else {
+        // Fallback timer jika URL audio kosong
+        _startFallbackTimer();
+      }
+    }
+  }
+
+  void _startFallbackTimer() {
+    setState(() {
+      _isPlaying = true;
+    });
+    _fallbackTimer?.cancel();
+    _fallbackTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_currentSeconds < _totalSeconds) {
+        setState(() {
+          _currentSeconds++;
+          _sliderValue = _currentSeconds / _totalSeconds;
         });
       } else {
-        _timer?.cancel();
+        _fallbackTimer?.cancel();
+        setState(() {
+          _isPlaying = false;
+          _currentSeconds = 0;
+          _sliderValue = 0.0;
+        });
       }
     });
+  }
+
+  Future<void> _seekAudio(double val) async {
+    final targetSec = (val * _totalSeconds).round();
+    setState(() {
+      _sliderValue = val;
+      _currentSeconds = targetSec;
+    });
+
+    try {
+      await _audioPlayer.seek(Duration(seconds: targetSec));
+    } catch (_) {}
   }
 
   void _toggleMute() {
     setState(() {
       _isMuted = !_isMuted;
+      _audioPlayer.setVolume(_isMuted ? 0.0 : 1.0);
     });
   }
 
@@ -119,41 +225,51 @@ class _ListeningQuestionTemplateState extends State<ListeningQuestionTemplate> {
             fontSize: 22,
             fontWeight: FontWeight.w800,
             color: const Color(0xFF0056D2), // Electric Royal Blue
-            letterSpacing: -0.3,
+            letterSpacing: -0.4,
           ),
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
 
-        // 2. Banner Instruksi dengan Ikon Headphone
+        // 2. Banner Instruksi (Icon Headphone & Teks Instruksi Sesuai Mockup)
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFFEBF3FE), // Soft Blue Background
+            color: const Color(0xFFF1F5F9), // Soft Neutral
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: const Color(0xFFDBEAFE),
-              width: 1.2,
+              color: const Color(0xFFE2E8F0),
+              width: 1.1,
             ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.headphones_rounded,
-                color: Color(0xFF0056D2),
-                size: 26,
+              Container(
+                width: 34,
+                height: 34,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0056D2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.headphones_rounded,
+                    color: Colors.white,
+                    size: 19,
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Dengarkan audio berikut dengan seksama, lalu pilih jawaban yang paling tepat.',
+                  'Dengarkan rekaman audio di bawah ini dengan teliti, kemudian pilih jawaban yang paling tepat.',
                   style: GoogleFonts.poppins(
-                    fontSize: 12.2,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF334155),
-                    height: 1.38,
+                    height: 1.35,
                   ),
                 ),
               ),
@@ -163,7 +279,66 @@ class _ListeningQuestionTemplateState extends State<ListeningQuestionTemplate> {
 
         const SizedBox(height: 14),
 
-        // 3. Audio Player Card (Sesuai Mockup)
+        // Banner Informasi Audio Baru (Biar Siswa Gak Kaget saat Audio Berganti)
+        if (widget.isNewAudio) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFFDE68A),
+                width: 1.1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF59E0B),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.notifications_active_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Rekaman Audio Berganti (Track #${widget.audioNomor})',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF92400E),
+                        ),
+                      ),
+                      Text(
+                        'Dengarkan percakapan baru ini untuk menjawab pertanyaan nomor ini.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10.5,
+                          color: const Color(0xFFB45309),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // 3. Audio Player Card (Sesuai Mockup & Terintegrasi Hardware Audio)
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -208,6 +383,40 @@ class _ListeningQuestionTemplateState extends State<ListeningQuestionTemplate> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0056D2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Track #${widget.audioNomor}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        if (widget.rentangSoal != null && widget.rentangSoal!.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '(${widget.rentangSoal})',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF0056D2),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
                     Text(
                       widget.audioTitle,
                       style: GoogleFonts.poppins(
@@ -238,12 +447,7 @@ class _ListeningQuestionTemplateState extends State<ListeningQuestionTemplate> {
                       ),
                       child: Slider(
                         value: _sliderValue.clamp(0.0, 1.0),
-                        onChanged: (val) {
-                          setState(() {
-                            _sliderValue = val;
-                            _currentSeconds = (val * _totalSeconds).round();
-                          });
-                        },
+                        onChanged: _seekAudio,
                       ),
                     ),
                   ],

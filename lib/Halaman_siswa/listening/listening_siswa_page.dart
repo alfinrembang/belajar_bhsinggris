@@ -451,11 +451,19 @@ class _ListeningSiswaPageState extends State<ListeningSiswaPage> {
           children: [
             ListeningQuestionTemplate(
               title: 'Dengarkan Percakapan ${_currentStep - 1}',
-              audioTitle: _listeningData?['audio_title'] ?? 'Audio Track',
-              totalDuration: _listeningData?['durasi'] ?? '02:00',
+              audioTitle: (soal['audio_title'] != null && soal['audio_title'].toString().trim().isNotEmpty)
+                  ? soal['audio_title'].toString()
+                  : (_listeningData?['audio_title'] ?? 'Audio Track #${soalIndex + 1}'),
+              totalDuration: (soal['durasi'] != null && soal['durasi'].toString().trim().isNotEmpty)
+                  ? soal['durasi'].toString()
+                  : (_listeningData?['durasi'] ?? '02:00'),
+              audioUrl: soal['audio_url'] ?? _listeningData?['audio_url'],
               questionNumber: soal['nomor_soal'] is int
                   ? soal['nomor_soal']
                   : (_currentStep - 1),
+              rentangSoal: soal['rentang_soal']?.toString(),
+              audioNomor: soal['audio_nomor'] is int ? soal['audio_nomor'] : 1,
+              isNewAudio: soal['is_new_audio'] == true,
               questionText: soal['pertanyaan']?.toString() ?? '',
               options: options,
               correctIndex: correctIdx,
