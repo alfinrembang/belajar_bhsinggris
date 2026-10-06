@@ -11,9 +11,24 @@ class ApiService {
   // Alamat server utama: 127.0.0.1 (aktif via ADB Reverse USB)
   // dan fallback otomatis ke IP Wi-Fi lokal jika USB dilepas
   static const String _primaryUrl = 'http://127.0.0.1:8000/api';
-  static const String _fallbackUrl = 'http://192.168.9.94:8000/api';
+  static const String _fallbackUrl = 'http://192.168.1.15:8000/api';
 
   static String activeBaseUrl = _primaryUrl;
+
+  /// Memastikan URL audio dapat diakses oleh perangkat Android (menyesuaikan host IP aktif)
+  static String resolveAudioUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return '';
+    final trimmed = url.trim();
+    if (trimmed.startsWith('http://localhost:8000') || trimmed.startsWith('http://127.0.0.1:8000')) {
+      final activeUri = Uri.parse(activeBaseUrl);
+      final activeHostAndPort = '${activeUri.host}:${activeUri.port}';
+      return trimmed
+          .replaceFirst('localhost:8000', activeHostAndPort)
+          .replaceFirst('127.0.0.1:8000', activeHostAndPort);
+    }
+    return trimmed;
+  }
+
 
   /// Cache ID materi yang telah diselesaikan siswa (sinkron reaktif instan antar halaman)
   static final Set<int> completedMateriIds = {};
