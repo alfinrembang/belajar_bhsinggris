@@ -13,6 +13,9 @@ class QuizItemData {
   final int jumlahSoal;
   final int xp;
   final IconData? customIcon;
+  final String? kodeRoom;
+  final bool isCompleted;
+  final int? skorTerakhir;
 
   const QuizItemData({
     required this.id,
@@ -22,12 +25,15 @@ class QuizItemData {
     required this.jumlahSoal,
     required this.xp,
     this.customIcon,
+    this.kodeRoom,
+    this.isCompleted = false,
+    this.skorTerakhir,
   });
 }
 
 /// Section List Quiz Tersedia: Menampilkan kartu-kartu kuis interaktif
 /// lengkap dengan MateriThumbnail squircle pastel, metadata durasi & soal,
-/// badge XP keemasan, dan tombol Mulai menggunakan CustomButton.
+/// badge XP keemasan, status selesai & skor, dan tombol Mulai.
 class QuizListSection extends StatelessWidget {
   final List<QuizItemData> items;
   final ValueChanged<QuizItemData>? onMulaiQuiz;
@@ -40,6 +46,27 @@ class QuizListSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+        alignment: Alignment.center,
+        child: Column(
+          children: [
+            const Icon(Icons.quiz_outlined, size: 48, color: Color(0xFF94A3B8)),
+            const SizedBox(height: 10),
+            Text(
+              'Belum ada kuis yang tersedia saat ini',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -59,13 +86,12 @@ class QuizListSection extends StatelessWidget {
         onTap: () => _handleCardTap(context, item),
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: const Color(0xFFF1F5F9),
+              color: item.isCompleted ? const Color(0xFFBBF7D0) : const Color(0xFFF1F5F9),
               width: 1.2,
             ),
             boxShadow: [
@@ -96,6 +122,49 @@ class QuizListSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Baris Kode Room & Status Selesai
+                    if (item.kodeRoom != null || item.isCompleted) ...[
+                      Row(
+                        children: [
+                          if (item.kodeRoom != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'ROOM: ${item.kodeRoom}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF1E6BFF),
+                                ),
+                              ),
+                            ),
+                          if (item.isCompleted) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                item.skorTerakhir != null ? 'Nilai: ${item.skorTerakhir}' : 'Selesai',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF16A34A),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                    ],
+
                     // Judul Kuis
                     Text(
                       item.title,
@@ -111,7 +180,7 @@ class QuizListSection extends StatelessWidget {
 
                     const SizedBox(height: 5),
 
-                    // Baris Metadata: ⏱ Menit & 📋 Soal
+                    // Baris Metadata: Menit & Soal
                     Row(
                       children: [
                         const Icon(
@@ -174,9 +243,9 @@ class QuizListSection extends StatelessWidget {
 
               const SizedBox(width: 10),
 
-              // 3. Tombol "Mulai ▶" (CustomButton Reusable)
+              // 3. Tombol "Mulai"
               CustomButton(
-                text: 'Mulai',
+                text: item.isCompleted ? 'Ulangi' : 'Mulai',
                 icon: Icons.play_arrow_rounded,
                 iconSize: 15,
                 height: 34,
@@ -184,6 +253,7 @@ class QuizListSection extends StatelessWidget {
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 borderRadius: BorderRadius.circular(12),
+                gradientColors: item.isCompleted ? const [Color(0xFF10B981), Color(0xFF059669)] : null,
                 onTap: () => _handleCardTap(context, item),
               ),
             ],
@@ -271,6 +341,7 @@ class QuizListSection extends StatelessWidget {
                     PageRouteBuilder(
                       pageBuilder: (c, a, s) => IsiQuizPage(
                         quizData: item,
+                        quizId: int.tryParse(item.id),
                       ),
                       transitionDuration: const Duration(milliseconds: 300),
                       transitionsBuilder: (c, a, s, child) =>
