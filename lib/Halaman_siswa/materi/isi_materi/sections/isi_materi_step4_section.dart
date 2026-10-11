@@ -1,18 +1,23 @@
+import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../services/api_service.dart';
 
-/// Section Konten Tahap 4: Latihan Soal Pemahaman (Mini Quiz 5 Soal dari Guru).
+/// Section Konten Tahap 4: Latihan Soal Pemahaman (Mini Quiz Gabungan Pilihan Ganda & Listening).
 /// 100% Dinamis dari tabel materi_soals di Laravel.
 class IsiMateriStep4Section extends StatefulWidget {
   final List<dynamic>? soals;
   final int xpReward;
-  final VoidCallback? onSelesai;
+  final void Function(Map<String, String> jawabanSiswa, int benar, int total)? onSelesai;
+  final void Function(Map<String, String> jawabanSiswa, int totalChecked, int totalSoal)? onProgressChanged;
 
   const IsiMateriStep4Section({
     super.key,
     this.soals,
     this.xpReward = 50,
     this.onSelesai,
+    this.onProgressChanged,
   });
 
   @override
@@ -23,7 +28,139 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
   int _activeSoalIndex = 0;
   final Map<int, String> _selectedAnswers = {};
   final Map<int, bool> _checkedAnswers = {};
-  bool _isPlayingAudioSoal = false;
+
+  // Integrasi Hardware Audio Player dengan audioplayers
+  late final AudioPlayer _audioPlayer;
+  bool _isPlayingAudio = false;
+  bool _isLoadingAudio = false;
+  Duration _audioPosition = Duration.zero;
+  Duration _audioDuration = Duration.zero;
+  String? _currentlyLoadedUrl;
+
+  StreamSubscription? _playerStateSub;
+  StreamSubscription? _positionSub;
+  StreamSubscription? _durationSub;
+  StreamSubscription? _completeSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAudioPlayer();
+  }
+
+  void _initAudioPlayer() {
+    _audioPlayer = AudioPlayer();
+
+    _playerStateSub = _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (!mounted) return;
+      setState(() {
+        _isPlayingAudio = state == PlayerState.playing;
+      });
+    });
+
+    _positionSub = _audioPlayer.onPositionChanged.listen((pos) {
+      if (!mounted) return;
+      setState(() {
+        _audioPosition = pos;
+      });
+    });
+
+    _durationSub = _audioPlayer.onDurationChanged.listen((dur) {
+      if (!mounted) return;
+      setState(() {
+        _audioDuration = dur;
+      });
+    });
+
+    _completeSub = _audioPlayer.onPlayerComplete.listen((_) {
+      if (!mounted) return;
+      setState(() {
+        _isPlayingAudio = false;
+        _audioPosition = Duration.zero;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _playerStateSub?.cancel();
+    _positionSub?.cancel();
+    _durationSub?.cancel();
+    _completeSub?.cancel();
+    _audioPlayer.stop();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  void _changeSoal(int newIndex) {
+    if (_isPlayingAudio) {
+      _audioPlayer.pause();
+    }
+    setState(() {
+      _activeSoalIndex = newIndex;
+      _audioPosition = Duration.zero;
+      _currentlyLoadedUrl = null;
+    });
+  }
+
+  Future<void> _toggleAudioSoal(String? rawUrl) async {
+    if (rawUrl == null || rawUrl.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('File audio untuk butir soal listening ini tidak ditemukan.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final resolvedUrl = ApiService.resolveAudioUrl(rawUrl);
+
+    if (_isPlayingAudio) {
+      await _audioPlayer.pause();
+    } else {
+      try {
+        setState(() => _isLoadingAudio = true);
+        if (_currentlyLoadedUrl != resolvedUrl) {
+          await _audioPlayer.setSource(UrlSource(resolvedUrl));
+          _currentlyLoadedUrl = resolvedUrl;
+        }
+        await _audioPlayer.resume();
+      } catch (e) {
+        debugPrint('Error playing audio listening: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal memutar audio: $e'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoadingAudio = false);
+        }
+      }
+    }
+  }
+
+  Future<void> _replayAudio(String? rawUrl) async {
+    if (rawUrl == null || rawUrl.trim().isEmpty) return;
+    final resolvedUrl = ApiService.resolveAudioUrl(rawUrl);
+    try {
+      await _audioPlayer.seek(Duration.zero);
+      await _audioPlayer.play(UrlSource(resolvedUrl));
+      _currentlyLoadedUrl = resolvedUrl;
+    } catch (e) {
+      debugPrint('Replay error: $e');
+    }
+  }
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
 
   void _selectOption(String choiceKey) {
     if (_checkedAnswers[_activeSoalIndex] == true) return;
@@ -49,31 +186,33 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
       _checkedAnswers[_activeSoalIndex] = true;
     });
 
+    // Notifikasi progres ke parent
+    final hasDynamic = widget.soals != null && widget.soals!.isNotEmpty;
+    final totalCount = hasDynamic ? widget.soals!.length : 1;
+    final Map<String, String> progressMap = {};
+    int checkedCount = 0;
+    for (int i = 0; i < totalCount; i++) {
+      if (_checkedAnswers[i] == true && _selectedAnswers[i] != null) {
+        checkedCount++;
+        final s = (widget.soals ?? [])[i];
+        final sId = (s['id'] ?? (i + 1)).toString();
+        progressMap[sId] = _selectedAnswers[i]!;
+      }
+    }
+    widget.onProgressChanged?.call(progressMap, checkedCount, totalCount);
+
     final isCorrect = selected.trim().toUpperCase() == kunciJawaban.trim().toUpperCase();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           isCorrect
-              ? '🎉 Jawaban Benar! +${(widget.xpReward / (widget.soals?.length ?? 5)).round()} XP'
-              : '❌ Jawaban Kurang Tepat. Simak pembahasannya di bawah.',
+              ? 'Jawaban Benar! +${(widget.xpReward / (widget.soals?.length ?? 5)).round()} XP'
+              : 'Jawaban Kurang Tepat. Simak pembahasannya di bawah.',
         ),
         backgroundColor: isCorrect ? const Color(0xFF059669) : const Color(0xFFDC2626),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _toggleAudioSoal() {
-    setState(() {
-      _isPlayingAudioSoal = !_isPlayingAudioSoal;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isPlayingAudioSoal ? 'Memutar audio listening soal...' : 'Audio soal dijeda.'),
-        duration: const Duration(milliseconds: 1200),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -88,7 +227,7 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
 
     final pertanyaan = currentSoal != null
         ? (currentSoal['pertanyaan']?.toString() ?? '')
-        : 'What is the main purpose of a descriptive text?';
+        : 'What is the main purpose of this lesson?';
 
     final tipeSoal = currentSoal != null
         ? (currentSoal['tipe_soal']?.toString() ?? 'pilgan')
@@ -98,9 +237,11 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
         ? currentSoal['audio_soal_url']?.toString()
         : null;
 
+    final isListening = tipeSoal == 'listening' || (audioSoalUrl != null && audioSoalUrl.isNotEmpty);
+
     final kunciJawaban = currentSoal != null
-        ? (currentSoal['kunci_jawaban']?.toString() ?? 'B')
-        : 'B';
+        ? (currentSoal['kunci_jawaban']?.toString() ?? 'A')
+        : 'A';
 
     final pembahasan = currentSoal != null
         ? (currentSoal['pembahasan']?.toString() ?? '')
@@ -115,10 +256,10 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
         }
       }
     } else {
-      pilihanMap['A'] = 'To entertain readers with a fictional story';
-      pilihanMap['B'] = 'To describe a specific person, place, or object';
-      pilihanMap['C'] = 'To tell the steps to make something';
-      pilihanMap['D'] = 'To report daily news events';
+      pilihanMap['A'] = 'To entertain readers with a story';
+      pilihanMap['B'] = 'To describe a specific object';
+      pilihanMap['C'] = 'To give instructions clearly';
+      pilihanMap['D'] = 'To explain scientific facts';
     }
 
     final selectedKey = _selectedAnswers[_activeSoalIndex];
@@ -130,13 +271,41 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
         // =====================================================================
         // HEADER: Latihan Soal Pemahaman
         // =====================================================================
-        Text(
-          'Latihan Soal Pemahaman',
-          style: GoogleFonts.poppins(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF1D4ED8),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Latihan Soal Pemahaman',
+              style: GoogleFonts.poppins(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1D4ED8),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFFD97706)),
+                  const SizedBox(width: 3),
+                  Text(
+                    '+${widget.xpReward} XP',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFB45309),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
 
         const SizedBox(height: 12),
@@ -178,22 +347,38 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: tipeSoal == 'listening'
+                      color: isListening
                           ? const Color(0xFFEDE9FE)
                           : const Color(0xFFEFF6FF),
                       borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      tipeSoal == 'listening' ? '🎧 Soal Listening' : '📝 Pilihan Ganda',
-                      style: GoogleFonts.poppins(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        color: tipeSoal == 'listening'
-                            ? const Color(0xFF7C3AED)
-                            : const Color(0xFF0066D6),
+                      border: Border.all(
+                        color: isListening
+                            ? const Color(0xFFDDD6FE)
+                            : const Color(0xFFBFDBFE),
                       ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isListening ? Icons.headphones_rounded : Icons.edit_note_rounded,
+                          size: 14,
+                          color: isListening ? const Color(0xFF7C3AED) : const Color(0xFF0066D6),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isListening ? 'Soal Listening' : 'Pilihan Ganda',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: isListening
+                                ? const Color(0xFF7C3AED)
+                                : const Color(0xFF0066D6),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -201,7 +386,7 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
 
               const SizedBox(height: 12),
 
-              // Pager Navigasi Nomor Soal (1, 2, 3, 4, 5)
+              // Pager Navigasi Nomor Soal (1, 2, 3, 4, 5...)
               if (totalSoal > 1)
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -212,11 +397,19 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
                       final isAnswered = _selectedAnswers.containsKey(idx);
                       final isAnsChecked = _checkedAnswers[idx] == true;
 
+                      // Deteksi apakah soal nomor ini bertipe listening
+                      bool itemIsListening = false;
+                      if (hasDynamicSoals && idx < widget.soals!.length) {
+                        final item = widget.soals![idx] as Map<String, dynamic>;
+                        itemIsListening = item['tipe_soal'] == 'listening' ||
+                            (item['audio_soal_url'] != null && item['audio_soal_url'].toString().isNotEmpty);
+                      }
+
                       Color btnColor = const Color(0xFFF1F5F9);
                       Color textColor = const Color(0xFF64748B);
 
                       if (isActive) {
-                        btnColor = const Color(0xFF0066D6);
+                        btnColor = itemIsListening ? const Color(0xFF7C3AED) : const Color(0xFF0066D6);
                         textColor = Colors.white;
                       } else if (isAnsChecked) {
                         final chosen = _selectedAnswers[idx];
@@ -234,38 +427,54 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: InkWell(
-                          onTap: () {
-                            setState(() {
-                              _activeSoalIndex = idx;
-                            });
-                          },
+                          onTap: () => _changeSoal(idx),
                           borderRadius: BorderRadius.circular(10),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
-                            width: 36,
-                            height: 36,
+                            width: 40,
+                            height: 38,
                             decoration: BoxDecoration(
                               color: btnColor,
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isActive
+                                    ? (itemIsListening ? const Color(0xFF6D28D9) : const Color(0xFF0052B4))
+                                    : Colors.transparent,
+                                width: 1.2,
+                              ),
                               boxShadow: isActive
                                   ? [
                                       BoxShadow(
-                                        color: const Color(0xFF0066D6).withValues(alpha: 0.25),
+                                        color: (itemIsListening ? const Color(0xFF7C3AED) : const Color(0xFF0066D6))
+                                            .withValues(alpha: 0.25),
                                         blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
                                     ]
                                   : null,
                             ),
-                            child: Center(
-                              child: Text(
-                                '${idx + 1}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: textColor,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Text(
+                                  '${idx + 1}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: textColor,
+                                  ),
                                 ),
-                              ),
+                                if (itemIsListening)
+                                  Positioned(
+                                    top: 3,
+                                    right: 4,
+                                    child: Icon(
+                                      Icons.headphones_rounded,
+                                      size: 9,
+                                      color: isActive ? Colors.white70 : const Color(0xFF7C3AED),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
@@ -276,66 +485,196 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
 
               const SizedBox(height: 14),
 
-              // Audio Khusus Soal Listening jika ada
-              if (tipeSoal == 'listening' || audioSoalUrl != null) ...[
+              // ===============================================================
+              // AUDIO PLAYER ELEGAN UNTUK SOAL LISTENING
+              // ===============================================================
+              if (isListening) ...[
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF5F3FF),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFDDD6FE)),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFDDD6FE), width: 1.3),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      InkWell(
-                        onTap: _toggleAudioSoal,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF7C3AED),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Icon(
-                              _isPlayingAudioSoal ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                              color: Colors.white,
-                              size: 20,
+                      // Header Audio Box
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEDE9FE),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.headphones_rounded,
+                              color: Color(0xFF7C3AED),
+                              size: 16,
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Audio Rekaman Soal',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF5B21B6),
+                                  ),
+                                ),
+                                Text(
+                                  'Dengarkan audio dengan teliti untuk menemukan jawaban',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10,
+                                    color: const Color(0xFF7C3AED),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_isLoadingAudio)
+                            const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF7C3AED),
+                              ),
+                            ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Dengarkan Audio Soal Ini',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF6D28D9),
-                              ),
-                            ),
-                            Text(
-                              'Klik play untuk mendengarkan audio rekaman',
-                              style: GoogleFonts.poppins(
-                                fontSize: 10.5,
+
+                      const SizedBox(height: 12),
+
+                      // Player Controller: Play/Pause, Slider, Timer, Replay
+                      Row(
+                        children: [
+                          // Tombol Play / Pause
+                          InkWell(
+                            onTap: () => _toggleAudioSoal(audioSoalUrl),
+                            borderRadius: BorderRadius.circular(22),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
                                 color: const Color(0xFF7C3AED),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  _isPlayingAudio
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          // Tombol Putar Ulang (Replay dari awal)
+                          InkWell(
+                            onTap: () => _replayAudio(audioSoalUrl),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: const Color(0xFFDDD6FE)),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.replay_rounded,
+                                  color: Color(0xFF6D28D9),
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          // Progress Bar Slider & Timer Waktu
+                          Expanded(
+                            child: Column(
+                              children: [
+                                SliderTheme(
+                                  data: SliderTheme.of(context).copyWith(
+                                    trackHeight: 4,
+                                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                                    activeTrackColor: const Color(0xFF7C3AED),
+                                    inactiveTrackColor: const Color(0xFFDDD6FE),
+                                    thumbColor: const Color(0xFF7C3AED),
+                                  ),
+                                  child: Slider(
+                                    value: (_audioDuration.inMilliseconds > 0)
+                                        ? (_audioPosition.inMilliseconds / _audioDuration.inMilliseconds)
+                                            .clamp(0.0, 1.0)
+                                        : 0.0,
+                                    onChanged: (val) {
+                                      if (_audioDuration.inMilliseconds > 0) {
+                                        final newPos = Duration(
+                                          milliseconds: (val * _audioDuration.inMilliseconds).round(),
+                                        );
+                                        _audioPlayer.seek(newPos);
+                                      }
+                                    },
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        _formatDuration(_audioPosition),
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF6D28D9),
+                                        ),
+                                      ),
+                                      Text(
+                                        _formatDuration(_audioDuration),
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF8B5CF6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
               ],
 
-              // Teks Pertanyaan
+              // Teks Pertanyaan Soal
               Text(
                 pertanyaan,
                 style: GoogleFonts.poppins(
@@ -348,7 +687,9 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
 
               const SizedBox(height: 14),
 
-              // 4 Pilihan Jawaban (A, B, C, D)
+              // ===============================================================
+              // 4 PILIHAN JAWABAN (A, B, C, D)
+              // ===============================================================
               ...pilihanMap.entries.map((entry) {
                 final key = entry.key;
                 final text = entry.value;
@@ -373,9 +714,9 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
                     badgeText = Colors.white;
                   }
                 } else if (isSelected) {
-                  cardBg = const Color(0xFFEFF6FF);
-                  borderColor = const Color(0xFF2563EB);
-                  badgeBg = const Color(0xFF0066D6);
+                  cardBg = isListening ? const Color(0xFFF5F3FF) : const Color(0xFFEFF6FF);
+                  borderColor = isListening ? const Color(0xFF7C3AED) : const Color(0xFF2563EB);
+                  badgeBg = isListening ? const Color(0xFF7C3AED) : const Color(0xFF0066D6);
                   badgeText = Colors.white;
                 }
 
@@ -495,11 +836,7 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
                 children: [
                   if (_activeSoalIndex > 0)
                     IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _activeSoalIndex--;
-                        });
-                      },
+                      onPressed: () => _changeSoal(_activeSoalIndex - 1),
                       icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
                       style: IconButton.styleFrom(
                         backgroundColor: const Color(0xFFF1F5F9),
@@ -511,19 +848,53 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
                     child: ElevatedButton(
                       onPressed: isChecked
                           ? (_activeSoalIndex < totalSoal - 1
-                              ? () {
-                                  setState(() {
-                                    _activeSoalIndex++;
-                                  });
-                                }
+                              ? () => _changeSoal(_activeSoalIndex + 1)
                               : () {
-                                  widget.onSelesai?.call();
+                                  final listSoal = widget.soals ?? [];
+                                  int unansweredIndex = -1;
+                                  for (int i = 0; i < listSoal.length; i++) {
+                                    if (_checkedAnswers[i] != true || _selectedAnswers[i] == null) {
+                                      unansweredIndex = i;
+                                      break;
+                                    }
+                                  }
+
+                                  if (unansweredIndex != -1) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('⚠️ Soal nomor  belum dijawab dan diperiksa! Selesaikan semua soal terlebih dahulu.'),
+                                        backgroundColor: const Color(0xFFDC2626),
+                                        behavior: SnackBarBehavior.floating,
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
+                                    _changeSoal(unansweredIndex);
+                                    return;
+                                  }
+
+                                  if (_isPlayingAudio) {
+                                    _audioPlayer.pause();
+                                  }
+
+                                  final Map<String, String> jawabanMap = {};
+                                  int benarCount = 0;
+                                  for (int i = 0; i < listSoal.length; i++) {
+                                    final s = listSoal[i];
+                                    final sId = (s['id'] ?? (i + 1)).toString();
+                                    final chosen = _selectedAnswers[i] ?? '';
+                                    jawabanMap[sId] = chosen;
+                                    final kunci = (s['kunci_jawaban'] ?? '').toString().trim().toUpperCase();
+                                    if (chosen.trim().toUpperCase() == kunci && kunci.isNotEmpty) {
+                                      benarCount++;
+                                    }
+                                  }
+                                  widget.onSelesai?.call(jawabanMap, benarCount, listSoal.length);
                                 })
                           : () => _checkAnswer(kunciJawaban),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isChecked
                             ? const Color(0xFF059669)
-                            : const Color(0xFF0066D6),
+                            : (isListening ? const Color(0xFF7C3AED) : const Color(0xFF0066D6)),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         elevation: 0,
@@ -547,11 +918,7 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
                   if (_activeSoalIndex < totalSoal - 1) ...[
                     const SizedBox(width: 8),
                     IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _activeSoalIndex++;
-                        });
-                      },
+                      onPressed: () => _changeSoal(_activeSoalIndex + 1),
                       icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                       style: IconButton.styleFrom(
                         backgroundColor: const Color(0xFFF1F5F9),

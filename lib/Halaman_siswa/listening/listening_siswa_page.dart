@@ -132,39 +132,92 @@ class _ListeningSiswaPageState extends State<ListeningSiswaPage> {
   }
 
   Future<void> _handleNext() async {
+    // 1. Jika belum di langkah terakhir, izinkan bebas navigasi (siswa bisa mencari soal yang lebih mudah dulu)
     if (_currentStep < _effectiveTotalSteps) {
       setState(() {
         _currentStep++;
       });
     } else {
-      // Langkah Terakhir: Selesaikan Listening & Kirim Skor ke Backend
+      // 2. Langkah Terakhir (Tombol Selesai): Wajib periksa apakah ada soal yang belum dijawab
+      if (_soalList.isNotEmpty) {
+        int unansweredIdx = -1;
+        for (int i = 0; i < _soalList.length; i++) {
+          if (_selectedAnswers[i] == null) {
+            unansweredIdx = i;
+            break;
+          }
+        }
+
+        if (unansweredIdx != -1) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('⚠️ Soal nomor ${unansweredIdx + 1} belum dijawab! Selesaikan semua butir soal terlebih dahulu.'),
+              backgroundColor: const Color(0xFFDC2626),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          setState(() {
+            _currentStep = unansweredIdx + 2; // Lompat langsung ke soal yang belum dijawab
+          });
+          return; // BLOKIR SELESAI!
+        }
+      }
+
+      // Tampilkan indikator loading saat memproses ke API
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: CircularProgressIndicator(color: Color(0xFF0056D2)),
+        ),
+      );
+
+      // Hitung skor estimasi lokal
       int skor = 100;
       int xpReward = _listeningData?['xp_reward'] is int
           ? _listeningData!['xp_reward']
           : (int.tryParse(_listeningData?['xp_reward']?.toString() ?? '') ?? 50);
 
+      // Susun mapping jawaban {soal_id: "A"/"B"/"C"/"D"}
+      final Map<String, String> jawabanMap = {};
       if (_soalList.isNotEmpty) {
         int correctCount = 0;
         for (int i = 0; i < _soalList.length; i++) {
-          final correctIdx = _getOptionIndex(_soalList[i]['jawaban_benar']);
-          if (_selectedAnswers[i] == correctIdx) {
+          final s = _soalList[i];
+          final sId = (s['id'] ?? (i + 1)).toString();
+          final optIdx = _selectedAnswers[i];
+          if (optIdx != null) {
+            jawabanMap[sId] = String.fromCharCode(65 + optIdx);
+          }
+
+          final correctIdx = _getOptionIndex(s['jawaban_benar']);
+          if (optIdx == correctIdx) {
             correctCount++;
           }
         }
         skor = ((correctCount / _soalList.length) * 100).round();
       }
 
-      // Kirim status penyelesaian ke server
+      // Kirim status penyelesaian ke server dengan jawaban asli
       if (widget.listeningId != null) {
-        await ApiService.selesaikanListening(
+        final res = await ApiService.selesaikanListening(
           listeningId: widget.listeningId!,
           siswaId: widget.siswa?.id,
           skor: skor,
           xpReward: xpReward,
+          jawaban: jawabanMap,
         );
+
+        if (res['success'] == true && res['data'] != null) {
+          final data = res['data'] as Map<String, dynamic>;
+          if (data['skor'] is int) skor = data['skor'];
+          if (data['xp_didapat'] is int) xpReward = data['xp_didapat'];
+        }
       }
 
       if (!mounted) return;
+      Navigator.of(context).pop(); // Tutup loading dialog
 
       // Tampilkan Modal Dialog Hasil & XP
       _showResultDialog(skor, xpReward);

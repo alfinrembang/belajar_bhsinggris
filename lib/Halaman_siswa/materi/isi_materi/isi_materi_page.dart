@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../models/siswa_model.dart';
 import '../../../../services/api_service.dart';
 import '../../../../widgets/isi_materi_background.dart';
@@ -38,6 +39,10 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
   bool _isBookmarked = false;
   bool _isLoading = false;
   Map<String, dynamic>? _detailData;
+  Map<String, String>? _step4Answers;
+  int? _step4Benar;
+  int? _step4Total;
+  int _step4CheckedCount = 0;
 
   @override
   void initState() {
@@ -93,41 +98,312 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
         _currentStep++;
       });
     } else {
-      // Langkah terakhir telah selesai
-      final title = _detailData?['judul']?.toString() ?? widget.judulMateri;
-      final rawId = _detailData?['id']?.toString() ?? widget.materiId?.toString() ?? '1';
-      final materiId = int.tryParse(rawId) ?? (widget.materiId ?? 1);
-      final xpReward = _detailData?['xp_reward'] is int
-          ? (_detailData!['xp_reward'] as int)
-          : (int.tryParse(_detailData?['xp_reward']?.toString() ?? '') ?? 50);
+      // Validasi ketat: jika ada soal latihan, harus dikerjakan dan diperiksa semua
+      final soals = _detailData?['soals'] as List<dynamic>?;
+      final totalSoal = soals?.length ?? 0;
 
-      // Simpan penyelesaian materi ke backend & cache lokal
-      await ApiService.selesaikanMateri(
-        materiId: materiId,
-        siswaId: widget.siswa?.id,
-        xpReward: xpReward,
-      );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text('🎉 Selamat! Materi $title selesai. +$xpReward XP'),
-              ),
-            ],
+      if (totalSoal > 0 && _step4CheckedCount < totalSoal) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '⚠️ Harap kerjakan dan periksa semua contoh soal terlebih dahulu! (Baru  dari  selesai)',
+            ),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
           ),
-          backgroundColor: const Color(0xFF059669),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-        ),
+        );
+        return;
+      }
+
+      await _selesaikanMateriDenganHasil(
+        jawaban: _step4Answers,
+        benar: _step4Benar,
+        total: _step4Total,
       );
-      Navigator.of(context).pop(true);
     }
+  }
+
+  Future<void> _selesaikanMateriDenganHasil({
+    Map<String, String>? jawaban,
+    int? benar,
+    int? total,
+  }) async {
+    final title = _detailData?['judul']?.toString() ?? widget.judulMateri;
+    final rawId = _detailData?['id']?.toString() ?? widget.materiId?.toString() ?? '1';
+    final materiId = int.tryParse(rawId) ?? (widget.materiId ?? 1);
+    final xpReward = _detailData?['xp_reward'] is int
+        ? (_detailData!['xp_reward'] as int)
+        : (int.tryParse(_detailData?['xp_reward']?.toString() ?? '') ?? 50);
+
+    // Tampilkan loading dialog singkat
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0066D6)),
+      ),
+    );
+
+    // Simpan penyelesaian materi ke backend & cache lokal dengan jawaban riil
+    final res = await ApiService.selesaikanMateri(
+      materiId: materiId,
+      siswaId: widget.siswa?.id,
+      xpReward: xpReward,
+      jawaban: jawaban,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context).pop(); // Tutup loading dialog
+
+    final data = res['data'] as Map<String, dynamic>?;
+    final int skor = data?['skor'] is int
+        ? (data!['skor'] as int)
+        : (total != null && total > 0 && benar != null
+            ? ((benar / total) * 100).round()
+            : 100);
+
+    final int xpDidapat = data?['xp_didapat'] is int
+        ? (data!['xp_didapat'] as int)
+        : (total != null && total > 0 && benar != null
+            ? (xpReward * (skor / 100)).round().clamp(5, xpReward)
+            : xpReward);
+
+    _showHasilEvaluasiDialog(
+      title: title,
+      skor: skor,
+      xpDidapat: xpDidapat,
+      benar: benar,
+      total: total,
+    );
+  }
+
+  void _showHasilEvaluasiDialog({
+    required String title,
+    required int skor,
+    required int xpDidapat,
+    int? benar,
+    int? total,
+  }) {
+    final bool isLulus = skor >= 70;
+    final Color primaryColor = isLulus ? const Color(0xFF059669) : const Color(0xFFD97706);
+    final IconData icon = isLulus ? Icons.emoji_events_rounded : Icons.lightbulb_rounded;
+    final String statusTitle = isLulus ? 'Hebat Sekali!' : 'Tetap Semangat!';
+    final String statusSubtitle = isLulus
+        ? 'Kamu berhasil menuntaskan modul ini dengan pemahaman yang sangat baik!'
+        : 'Kamu telah menyelesaikan modul ini. Pelajari kembali materi untuk hasil lebih optimal!';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          elevation: 10,
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Badge Ikon
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: primaryColor, size: 38),
+                ),
+                const SizedBox(height: 16),
+
+                // Judul Status
+                Text(
+                  statusTitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+
+                // Nama Modul
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF64748B),
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 18),
+
+                // Nilai / Skor Box
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Nilai Akhir',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            '',
+                            style: GoogleFonts.poppins(
+                              fontSize: 40,
+                              fontWeight: FontWeight.w800,
+                              color: primaryColor,
+                            ),
+                          ),
+                          Text(
+                            ' / 100',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Statistik Mini (Benar & XP)
+                Row(
+                  children: [
+                    if (total != null && total > 0) ...[
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Benar',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: const Color(0xFF64748B),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                ' dari ',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Reward XP',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                color: const Color(0xFFB45309),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '+ XP',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFFB45309),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Subtitle Motivasi
+                Text(
+                  statusSubtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.5,
+                    color: const Color(0xFF64748B),
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+
+                // Tombol Kembali
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).pop(true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0066D6),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'Kembali ke Menu Materi',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -190,7 +466,6 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
         'Descriptive text adalah jenis teks yang bertujuan untuk menggambarkan orang, tempat, atau benda secara rinci dan spesifik.\n\nStruktur Teks:\n1. Identification: Mengenalkan objek yang akan digambarkan.\n2. Description: Menjelaskan kualitas, karakteristik fisik, dan keunikan objek.\n\nUnsur Bahasa:\n- Menggunakan Simple Present Tense.\n- Menggunakan banyak kata sifat (Adjectives).';
     final contohTeks = _detailData?['contoh_teks']?.toString() ??
         'Borobudur is a ninth-century Mahayana Buddhist temple located in Magelang Regency, Central Java, Indonesia. It is recognized as the world\'s largest Buddhist temple. The monument consists of nine stacked platforms, six square and three circular, topped by a central dome.';
-    final audioUrl = _detailData?['audio_url']?.toString();
     final gambarUrl = _detailData?['gambar_url']?.toString();
     final soals = _detailData?['soals'] as List<dynamic>?;
     final xpReward = _detailData?['xp_reward'] is int
@@ -249,7 +524,6 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
             IsiMateriStep3Section(
               judul: activeJudul,
               contohTeks: contohTeks,
-              audioUrl: audioUrl,
               gambarUrl: gambarUrl,
             ),
             const SizedBox(height: 16),
@@ -265,7 +539,22 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
             IsiMateriStep4Section(
               soals: soals,
               xpReward: xpReward,
-              onSelesai: _handleNext,
+              onProgressChanged: (jawaban, checkedCount, total) {
+                _step4Answers = jawaban;
+                _step4CheckedCount = checkedCount;
+                _step4Total = total;
+              },
+              onSelesai: (jawaban, benar, total) {
+                _step4Answers = jawaban;
+                _step4Benar = benar;
+                _step4Total = total;
+                _step4CheckedCount = total;
+                _selesaikanMateriDenganHasil(
+                  jawaban: jawaban,
+                  benar: benar,
+                  total: total,
+                );
+              },
             ),
             const SizedBox(height: 16),
           ],
