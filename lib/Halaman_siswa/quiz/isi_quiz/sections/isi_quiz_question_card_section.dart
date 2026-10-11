@@ -10,6 +10,7 @@ class IsiQuizQuestionCardSection extends StatelessWidget {
   final bool isListening;
   final String? audioTitle;
   final String? audioDuration;
+  final String? audioUrl;
 
   const IsiQuizQuestionCardSection({
     super.key,
@@ -19,6 +20,7 @@ class IsiQuizQuestionCardSection extends StatelessWidget {
     this.isListening = false,
     this.audioTitle,
     this.audioDuration,
+    this.audioUrl,
   });
 
   @override
@@ -71,6 +73,28 @@ class IsiQuizQuestionCardSection extends StatelessWidget {
                       ),
                     ],
                   ),
+
+                  // Jika ada teks bacaan (reading), tampilkan pertanyaan setelah teks
+                  if (readingPassage != null && !isListening) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Text(
+                        questionText,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
 
                   // Jika soal Listening: Munculkan Pemutar Audio
                   if (isListening) ...[
