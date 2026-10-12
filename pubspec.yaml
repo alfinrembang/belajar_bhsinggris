@@ -64,6 +64,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/rakun_listening.png
+    - assets/images/puzzle/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
