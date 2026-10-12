@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../models/siswa_model.dart';
+import '../../../services/api_service.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
 import '../../../widgets/student_background.dart';
 
 /// Halaman Kelola Profil Siswa: Memungkinkan siswa mengedit
-/// Nama Lengkap, Kelas, Foto Profil (kamera / galeri), serta Kata Sandi akun.
+/// Nama Lengkap, Kelas & Rombel (saat periode dibuka guru), No Absen,
+/// Foto Profil (kamera / galeri), serta Kata Sandi akun.
 class KelolaProfilPage extends StatefulWidget {
   final SiswaModel? siswa;
 
@@ -20,11 +22,12 @@ class KelolaProfilPage extends StatefulWidget {
 
 class _KelolaProfilPageState extends State<KelolaProfilPage> {
   final TextEditingController _namaController = TextEditingController();
+  final TextEditingController _noAbsenController = TextEditingController();
   final TextEditingController _sandiLamaController = TextEditingController();
   final TextEditingController _sandiBaruController = TextEditingController();
   final TextEditingController _konfirmasiSandiController = TextEditingController();
 
-  String _selectedKelas = 'XII RPL 1';
+  String _selectedKelas = '10 TSM 1';
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
 
@@ -33,32 +36,55 @@ class _KelolaProfilPageState extends State<KelolaProfilPage> {
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
-  final List<String> _daftarKelas = const [
-    'X RPL 1',
-    'X RPL 2',
-    'X TSM 1',
-    'X TSM 2',
-    'XI RPL 1',
-    'XI RPL 2',
-    'XI TSM 1',
-    'XI TSM 2',
-    'XII RPL 1',
-    'XII RPL 2',
-    'XII TSM 1',
-    'XII TSM 2',
-  ];
+  // Status Akademik & Kenaikan Kelas dari Backend
+  bool _isKenaikanAktif = false;
+  String _tahunAjaran = '2026/2027';
+  bool _perluKenaikanKelas = false;
+  bool _isLoadingAkademik = true;
+
+  List<String> _daftarKelas = [];
 
   @override
   void initState() {
     super.initState();
-    // Isi data awal dari akun siswa yang sedang login
-    _namaController.text = widget.siswa?.namaLengkap ?? 'Budi Pratama';
+    // 1. Data Personal Awal
+    _namaController.text = widget.siswa?.namaLengkap ?? 'Siswa';
+    _noAbsenController.text = widget.siswa?.noAbsen ?? '';
 
-    final kelasAwal = widget.siswa?.kelasLengkap ?? widget.siswa?.kelas ?? 'XII RPL 1';
+    // 2. Tentukan Jurusan Siswa (Jurusan tetap sama saat naik kelas)
+    String jurusan = widget.siswa?.jurusan ?? '';
+    if (jurusan.isEmpty && widget.siswa?.kelasLengkap != null) {
+      final parts = widget.siswa!.kelasLengkap!.trim().split(' ');
+      if (parts.length >= 2) {
+        jurusan = parts[1];
+      }
+    }
+    if (jurusan.isEmpty) {
+      jurusan = 'TSM';
+    }
+
+    // 3. Bangun Opsi Rombel untuk Jurusan Siswa (Tingkat 10, 11, 12 x Rombel 1, 2, 3)
+    final rombelList = <String>[];
+    for (final tingkat in ['10', '11', '12']) {
+      for (final no in ['1', '2', '3']) {
+        rombelList.add('$tingkat $jurusan $no');
+      }
+    }
+    // Tambahkan juga varian Romawi untuk kompatibilitas
+    for (final tingkat in ['X', 'XI', 'XII']) {
+      for (final no in ['1', '2', '3']) {
+        rombelList.add('$tingkat $jurusan $no');
+      }
+    }
+
+    _daftarKelas = rombelList;
+
+    final kelasAwal = widget.siswa?.kelasLengkap ?? widget.siswa?.kelas ?? '10 $jurusan 1';
     if (_daftarKelas.contains(kelasAwal)) {
       _selectedKelas = kelasAwal;
     } else {
-      _selectedKelas = _daftarKelas.first;
+      _daftarKelas.insert(0, kelasAwal);
+      _selectedKelas = kelasAwal;
     }
 
     if (widget.siswa?.foto != null && widget.siswa!.foto!.isNotEmpty) {
@@ -67,15 +93,46 @@ class _KelolaProfilPageState extends State<KelolaProfilPage> {
         _imageFile = file;
       }
     }
+
+    // 4. Periksa Status Periode Kenaikan Kelas dari Server
+    _fetchStatusAkademik();
   }
 
   @override
   void dispose() {
     _namaController.dispose();
+    _noAbsenController.dispose();
     _sandiLamaController.dispose();
     _sandiBaruController.dispose();
     _konfirmasiSandiController.dispose();
     super.dispose();
+  }
+
+  // Mengambil Status Periode Kenaikan Kelas dari Backend
+  Future<void> _fetchStatusAkademik() async {
+    setState(() => _isLoadingAkademik = true);
+    try {
+      final res = await ApiService.getStatusAkademik(siswaId: widget.siswa?.id);
+      if (res['success'] == true && res['data'] != null) {
+        final data = res['data'];
+        if (mounted) {
+          setState(() {
+            _isKenaikanAktif = data['is_periode_kenaikan_aktif'] == true;
+            _tahunAjaran = data['tahun_ajaran']?.toString() ?? '2026/2027';
+            _perluKenaikanKelas = data['perlu_kenaikan_kelas'] == true;
+            _isLoadingAkademik = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() => _isLoadingAkademik = false);
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingAkademik = false);
+      }
+    }
   }
 
   // Fungsi Memilih Foto Profil dari Galeri atau Kamera
@@ -225,8 +282,8 @@ class _KelolaProfilPageState extends State<KelolaProfilPage> {
     );
   }
 
-  // Fungsi Validasi & Simpan Perubahan Profil
-  void _handleSimpan() {
+  // Fungsi Validasi & Simpan Perubahan Profil ke Server Laravel
+  Future<void> _handleSimpan() async {
     final nama = _namaController.text.trim();
     if (nama.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -274,29 +331,50 @@ class _KelolaProfilPageState extends State<KelolaProfilPage> {
 
     setState(() => _isLoading = true);
 
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+    final siswaId = widget.siswa?.id ?? 0;
+    final res = await ApiService.updateProfilSiswa(
+      siswaId: siswaId,
+      namaLengkap: nama,
+      kelasLengkap: _selectedKelas,
+      noAbsen: _noAbsenController.text.trim(),
+      sandiLama: sandiLama.isNotEmpty ? sandiLama : null,
+      sandiBaru: sandiBaru.isNotEmpty ? sandiBaru : null,
+    );
 
-      // Buat objek SiswaModel yang terupdate dengan data baru
-      final updatedSiswa = (widget.siswa ?? SiswaModel(namaLengkap: nama, email: '')).copyWith(
-        namaLengkap: nama,
-        kelasLengkap: _selectedKelas,
-        kelas: _selectedKelas,
-        foto: _imageFile?.path,
-      );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (res['success'] == true) {
+      SiswaModel updatedSiswa = (res['siswa'] as SiswaModel?) ??
+          (widget.siswa ?? SiswaModel(namaLengkap: nama, email: '')).copyWith(
+            namaLengkap: nama,
+            kelasLengkap: _selectedKelas,
+            noAbsen: _noAbsenController.text.trim(),
+          );
+
+      if (_imageFile != null) {
+        updatedSiswa = updatedSiswa.copyWith(foto: _imageFile!.path);
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profil berhasil diperbarui!'),
-          backgroundColor: Color(0xFF059669),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(res['message'] ?? 'Profil berhasil diperbarui!'),
+          backgroundColor: const Color(0xFF059669),
+          duration: const Duration(seconds: 2),
         ),
       );
 
-      // Kembalikan objek yang terupdate ke halaman sebelumnya
+      // Kembalikan objek yang terupdate ke halaman profil
       Navigator.pop(context, updatedSiswa);
-    });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Gagal memperbarui profil.'),
+          backgroundColor: const Color(0xFFEF4444),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
@@ -369,9 +447,158 @@ class _KelolaProfilPageState extends State<KelolaProfilPage> {
                   ],
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
-                // 2. Card Foto Profil (Avatar Besar + Tombol Kamera)
+                // 2. Banner Informasi Periode Kenaikan Kelas (Dinamis dari Guru)
+                if (!_isLoadingAkademik) ...[
+                  if (_isKenaikanAktif)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4), width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.celebration_rounded, color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Periode Kenaikan Kelas Dibuka!',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF065F46),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF059669),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        _tahunAjaran,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Silakan sesuaikan tingkat kelas, nomor rombel, dan no. absen barumu sesuai pembagian wali kelas.',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF047857),
+                                    height: 1.35,
+                                  ),
+                                ),
+                                if (_perluKenaikanKelas) ...[
+                                  const SizedBox(height: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF047857).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '📌 Rombel Anda belum terdaftar di tahun ajaran $_tahunAjaran.',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF065F46),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.lock_outline_rounded, size: 18, color: Color(0xFF64748B)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Rombel Kelas & No Absen Terkunci',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Periode kenaikan kelas sedang ditutup oleh guru. Jika rombel tidak sesuai, silakan lapor ke bapak/ibu guru.',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10.5,
+                                    color: const Color(0xFF64748B),
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+
+                // 3. Card Foto Profil (Avatar Besar + Tombol Kamera)
                 Center(
                   child: Stack(
                     alignment: Alignment.bottomRight,
@@ -467,7 +694,7 @@ class _KelolaProfilPageState extends State<KelolaProfilPage> {
 
                 const SizedBox(height: 16),
 
-                // 3. Card Data Diri Siswa (Nama & Kelas)
+                // 4. Card Data Diri Siswa (Nama, Rombel Kelas, No Absen)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
@@ -512,62 +739,189 @@ class _KelolaProfilPageState extends State<KelolaProfilPage> {
 
                       const SizedBox(height: 14),
 
-                      // Pilihan Dropdown Kelas
+                      // Pilihan Dropdown Kelas / Rombel (Terkunci jika sakelar guru OFF)
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
                             padding: const EdgeInsets.only(bottom: 3, left: 2),
-                            child: Text(
-                              'Kelas Siswa',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF334155),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            height: 42,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEDF2F7),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: const Color(0xFFDCE4EF),
-                                width: 1.2,
-                              ),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _selectedKelas,
-                                isExpanded: true,
-                                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF8193AA)),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13.5,
-                                  color: const Color(0xFF1E293B),
-                                  fontWeight: FontWeight.w600,
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Rombel Kelas',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF334155),
+                                  ),
                                 ),
-                                items: _daftarKelas.map((String k) {
-                                  return DropdownMenuItem<String>(
-                                    value: k,
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.school_rounded, size: 16, color: Color(0xFF0066D6)),
-                                        const SizedBox(width: 8),
-                                        Text(k),
-                                      ],
+                                if (!_isKenaikanAktif) ...[
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.lock_rounded, size: 12, color: Color(0xFF94A3B8)),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '(Terkunci)',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF94A3B8),
                                     ),
-                                  );
-                                }).toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() => _selectedKelas = val);
-                                  }
-                                },
-                              ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
+
+                          if (_isKenaikanAktif)
+                            Container(
+                              height: 44,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEDF2F7),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: const Color(0xFF10B981).withValues(alpha: 0.5),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedKelas,
+                                  isExpanded: true,
+                                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF059669)),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13.5,
+                                    color: const Color(0xFF1E293B),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  items: _daftarKelas.map((String k) {
+                                    return DropdownMenuItem<String>(
+                                      value: k,
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.school_rounded, size: 16, color: Color(0xFF059669)),
+                                          const SizedBox(width: 8),
+                                          Text(k),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() => _selectedKelas = val);
+                                    }
+                                  },
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              height: 44,
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.school_rounded, size: 16, color: Color(0xFF64748B)),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _selectedKelas,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13.5,
+                                          color: const Color(0xFF475569),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const Icon(Icons.lock_rounded, size: 16, color: Color(0xFF94A3B8)),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // Input Nomor Absen Siswa (Terkunci jika sakelar guru OFF)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 3, left: 2),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Nomor Absen Presensi',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                                if (!_isKenaikanAktif) ...[
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.lock_rounded, size: 12, color: Color(0xFF94A3B8)),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '(Terkunci)',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF94A3B8),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+
+                          if (_isKenaikanAktif)
+                            CustomTextField(
+                              label: '',
+                              controller: _noAbsenController,
+                              hintText: 'Contoh: 15',
+                              prefixIcon: Icons.format_list_numbered_rounded,
+                              keyboardType: TextInputType.number,
+                            )
+                          else
+                            Container(
+                              height: 44,
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.format_list_numbered_rounded, size: 16, color: Color(0xFF64748B)),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _noAbsenController.text.isNotEmpty
+                                            ? _noAbsenController.text
+                                            : 'Belum diatur',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13.5,
+                                          color: const Color(0xFF475569),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const Icon(Icons.lock_rounded, size: 16, color: Color(0xFF94A3B8)),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ],
@@ -576,7 +930,7 @@ class _KelolaProfilPageState extends State<KelolaProfilPage> {
 
                 const SizedBox(height: 18),
 
-                // 4. Card Keamanan Akun (Ubah Sandi Opsional)
+                // 5. Card Keamanan Akun (Ubah Sandi Opsional)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
@@ -679,7 +1033,7 @@ class _KelolaProfilPageState extends State<KelolaProfilPage> {
 
                 const SizedBox(height: 24),
 
-                // 5. Tombol Simpan Perubahan
+                // 6. Tombol Simpan Perubahan
                 CustomButton(
                   text: 'Simpan Perubahan',
                   icon: Icons.check_rounded,

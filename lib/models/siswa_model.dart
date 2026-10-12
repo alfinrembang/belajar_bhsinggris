@@ -9,6 +9,8 @@ class SiswaModel {
   final String? noKelas;
   final String? noAbsen;
   final String? kelasLengkap;
+  final String? tahunAjaranAktif;
+  final String? statusKelulusan;
   final String? token;
   final String? foto;
   final String? fotoUrl;
@@ -24,6 +26,8 @@ class SiswaModel {
     this.noKelas,
     this.noAbsen,
     this.kelasLengkap,
+    this.tahunAjaranAktif,
+    this.statusKelulusan,
     this.token,
     this.foto,
     this.fotoUrl,
@@ -55,6 +59,8 @@ class SiswaModel {
       noKelas: rawNoKelas,
       noAbsen: json['no_absen']?.toString(),
       kelasLengkap: generatedKelasLengkap,
+      tahunAjaranAktif: json['tahun_ajaran_aktif']?.toString(),
+      statusKelulusan: json['status_kelulusan']?.toString(),
       token: token ?? json['api_token']?.toString(),
       foto: json['foto']?.toString(),
       fotoUrl: json['foto_url']?.toString(),
@@ -73,6 +79,8 @@ class SiswaModel {
       'no_kelas': noKelas,
       'no_absen': noAbsen,
       'kelas_lengkap': kelasLengkap,
+      'tahun_ajaran_aktif': tahunAjaranAktif,
+      'status_kelulusan': statusKelulusan,
       'api_token': token,
       'foto': foto,
       'foto_url': fotoUrl,
@@ -90,6 +98,8 @@ class SiswaModel {
     String? noKelas,
     String? noAbsen,
     String? kelasLengkap,
+    String? tahunAjaranAktif,
+    String? statusKelulusan,
     String? token,
     String? foto,
     String? fotoUrl,
@@ -105,6 +115,8 @@ class SiswaModel {
       noKelas: noKelas ?? this.noKelas,
       noAbsen: noAbsen ?? this.noAbsen,
       kelasLengkap: kelasLengkap ?? this.kelasLengkap,
+      tahunAjaranAktif: tahunAjaranAktif ?? this.tahunAjaranAktif,
+      statusKelulusan: statusKelulusan ?? this.statusKelulusan,
       token: token ?? this.token,
       foto: foto ?? this.foto,
       fotoUrl: fotoUrl ?? this.fotoUrl,

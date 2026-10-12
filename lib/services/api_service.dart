@@ -8,12 +8,14 @@ import '../Halaman_siswa/materi/sections/materi_list_section.dart';
 /// Service untuk menangani seluruh komunikasi API antara aplikasi Flutter
 /// dan backend Laravel (belajar_bhsinggris_api).
 class ApiService {
-  // Alamat server utama: 127.0.0.1 (aktif via ADB Reverse USB)
-  // dan fallback otomatis ke IP Wi-Fi lokal jika USB dilepas
-  static const String _primaryUrl = 'http://127.0.0.1:8000/api';
-  static const String _fallbackUrl = 'http://192.168.1.19:8000/api';
+  // Alamat server: mendukung koneksi via USB (ADB Reverse), Wi-Fi lokal, dan Emulator
+  static const List<String> _candidateUrls = [
+    'http://192.168.1.20:8000/api', // IP Wi-Fi lokal laptop saat ini
+    'http://127.0.0.1:8000/api',     // USB / ADB Reverse
+    'http://10.0.2.2:8000/api',      // Android Emulator
+  ];
 
-  static String activeBaseUrl = _primaryUrl;
+  static String activeBaseUrl = _candidateUrls.first;
 
   /// Memastikan URL audio dapat diakses oleh perangkat Android (menyesuaikan host IP aktif)
   static String resolveAudioUrl(String? url) {
@@ -39,27 +41,31 @@ class ApiService {
     completedMateriIds.add(id);
   }
 
-  /// Helper untuk mengirim HTTP Request dengan fallback otomatis antar host
+  /// Helper untuk mengirim HTTP Request dengan multi-fallback otomatis antar host
   static Future<http.Response> _sendRequest(
     Future<http.Response> Function(String baseUrl) requestFn,
   ) async {
+    // 1. Coba host aktif terlebih dahulu
     try {
       final response = await requestFn(activeBaseUrl).timeout(
-        const Duration(seconds: 7),
+        const Duration(seconds: 4),
       );
       return response;
-    } catch (e) {
-      // Jika host utama gagal (misal koneksi USB terputus), coba host fallback
-      final alternateUrl = (activeBaseUrl == _primaryUrl) ? _fallbackUrl : _primaryUrl;
-      try {
-        final altResponse = await requestFn(alternateUrl).timeout(
-          const Duration(seconds: 7),
-        );
-        activeBaseUrl = alternateUrl; // Ingat host yang berhasil
-        return altResponse;
-      } catch (_) {
-        rethrow; // Lempar error asli jika kedua host gagal
+    } catch (_) {
+      // 2. Jika host aktif gagal, coba kandidat host lainnya
+      for (final candidate in _candidateUrls) {
+        if (candidate == activeBaseUrl) continue;
+        try {
+          final altResponse = await requestFn(candidate).timeout(
+            const Duration(seconds: 4),
+          );
+          activeBaseUrl = candidate; // Simpan host yang berhasil untuk request berikutnya
+          return altResponse;
+        } catch (_) {
+          continue;
+        }
       }
+      rethrow;
     }
   }
 
@@ -907,6 +913,108 @@ class ApiService {
       return {
         'success': false,
         'message': 'Gagal koneksi saat menyimpan progres puzzle: $e',
+      };
+    }
+  }
+
+  /// 17. Ambil Status Akademik & Periode Kenaikan Kelas (GET /api/siswa/status-akademik)
+  static Future<Map<String, dynamic>> getStatusAkademik({int? siswaId}) async {
+    try {
+      final response = await _sendRequest((baseUrl) {
+        final queryParams = <String, String>{};
+        if (siswaId != null) queryParams['siswa_id'] = siswaId.toString();
+        final uri = Uri.parse('$baseUrl/siswa/status-akademik').replace(
+          queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        );
+        return http.get(uri, headers: {'Accept': 'application/json'});
+      });
+
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      if (response.statusCode == 200 && body['status'] == 'success') {
+        return {
+          'success': true,
+          'data': body['data'],
+        };
+      }
+
+      return {
+        'success': false,
+        'message': body['message'] ?? 'Gagal mengambil status akademik.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal memeriksa status akademik: $e',
+      };
+    }
+  }
+
+  /// 18. Perbarui Profil Siswa & Kenaikan Kelas (POST /api/siswa/update-profil)
+  static Future<Map<String, dynamic>> updateProfilSiswa({
+    required int siswaId,
+    String? namaLengkap,
+    String? kelasLengkap,
+    String? kelas,
+    String? noKelas,
+    String? noAbsen,
+    String? sandiLama,
+    String? sandiBaru,
+  }) async {
+    try {
+      final payload = <String, dynamic>{
+        'siswa_id': siswaId,
+      };
+      if (namaLengkap != null && namaLengkap.isNotEmpty) {
+        payload['nama_lengkap'] = namaLengkap;
+      }
+      if (kelasLengkap != null && kelasLengkap.isNotEmpty) {
+        payload['kelas_lengkap'] = kelasLengkap;
+      }
+      if (kelas != null && kelas.isNotEmpty) {
+        payload['kelas'] = kelas;
+      }
+      if (noKelas != null && noKelas.isNotEmpty) {
+        payload['no_kelas'] = noKelas;
+      }
+      if (noAbsen != null && noAbsen.isNotEmpty) {
+        payload['no_absen'] = noAbsen;
+      }
+      if (sandiLama != null && sandiLama.isNotEmpty) {
+        payload['sandi_lama'] = sandiLama;
+      }
+      if (sandiBaru != null && sandiBaru.isNotEmpty) {
+        payload['sandi_baru'] = sandiBaru;
+      }
+
+      final response = await _sendRequest((baseUrl) {
+        return http.post(
+          Uri.parse('$baseUrl/siswa/update-profil'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: jsonEncode(payload),
+        );
+      });
+
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      if (response.statusCode == 200 && body['status'] == 'success') {
+        final updatedSiswa = SiswaModel.fromJson(body['data']);
+        return {
+          'success': true,
+          'message': body['message'] ?? 'Profil berhasil diperbarui!',
+          'siswa': updatedSiswa,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': body['message'] ?? 'Gagal memperbarui profil (${response.statusCode})',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal memperbarui profil: $e',
       };
     }
   }
