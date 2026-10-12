@@ -1,75 +1,35 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-import 'package:http/http.dart' as http;
-import '../models/siswa_model.dart';
-import '../Halaman_siswa/materi/sections/materi_list_section.dart';
+// Facade API Service - Pintu gerbang utama ke semua API domain
+// Mendukung ekspor langsung dan pendelegasian statis demi kompatibilitas 100%
 
-/// Service untuk menangani seluruh komunikasi API antara aplikasi Flutter
-/// dan backend Laravel (belajar_bhsinggris_api).
+export 'api/api_client.dart';
+export 'api/auth_service.dart';
+export 'api/materi_service.dart';
+export 'api/listening_service.dart';
+export 'api/quiz_service.dart';
+export 'api/puzzle_service.dart';
+export 'api/siswa_service.dart';
+
+import 'api/api_client.dart';
+import 'api/auth_service.dart';
+import 'api/materi_service.dart';
+import 'api/listening_service.dart';
+import 'api/quiz_service.dart';
+import 'api/puzzle_service.dart';
+import 'api/siswa_service.dart';
+
+/// Facade untuk menjaga kompatibilitas mundur (backward-compatible)
+/// sehingga seluruh halaman UI tetap memanggil `ApiService.xxx()` tanpa error.
 class ApiService {
-  // Alamat server: mendukung koneksi via USB (ADB Reverse), Wi-Fi lokal, dan Emulator
-  static const List<String> _candidateUrls = [
-    'http://192.168.1.20:8000/api', // IP Wi-Fi lokal laptop saat ini
-    'http://127.0.0.1:8000/api',     // USB / ADB Reverse
-    'http://10.0.2.2:8000/api',      // Android Emulator
-  ];
+  // ----------------------------------------------------
+  // Client & Network Helper
+  // ----------------------------------------------------
+  static String get activeBaseUrl => ApiClient.activeBaseUrl;
+  static set activeBaseUrl(String url) => ApiClient.activeBaseUrl = url;
+  static String resolveAudioUrl(String? url) => ApiClient.resolveAudioUrl(url);
 
-  static String activeBaseUrl = _candidateUrls.first;
-
-  /// Memastikan URL audio dapat diakses oleh perangkat Android (menyesuaikan host IP aktif)
-  static String resolveAudioUrl(String? url) {
-    if (url == null || url.trim().isEmpty) return '';
-    final trimmed = url.trim();
-    if (trimmed.startsWith('http://localhost:8000') || trimmed.startsWith('http://127.0.0.1:8000')) {
-      final activeUri = Uri.parse(activeBaseUrl);
-      final activeHostAndPort = '${activeUri.host}:${activeUri.port}';
-      return trimmed
-          .replaceFirst('localhost:8000', activeHostAndPort)
-          .replaceFirst('127.0.0.1:8000', activeHostAndPort);
-    }
-    return trimmed;
-  }
-
-
-  /// Cache ID materi yang telah diselesaikan siswa (sinkron reaktif instan antar halaman)
-  static final Set<int> completedMateriIds = {};
-
-  static bool isMateriCompleted(int id) => completedMateriIds.contains(id);
-
-  static void markMateriCompleted(int id) {
-    completedMateriIds.add(id);
-  }
-
-  /// Helper untuk mengirim HTTP Request dengan multi-fallback otomatis antar host
-  static Future<http.Response> _sendRequest(
-    Future<http.Response> Function(String baseUrl) requestFn,
-  ) async {
-    // 1. Coba host aktif terlebih dahulu
-    try {
-      final response = await requestFn(activeBaseUrl).timeout(
-        const Duration(seconds: 4),
-      );
-      return response;
-    } catch (_) {
-      // 2. Jika host aktif gagal, coba kandidat host lainnya
-      for (final candidate in _candidateUrls) {
-        if (candidate == activeBaseUrl) continue;
-        try {
-          final altResponse = await requestFn(candidate).timeout(
-            const Duration(seconds: 4),
-          );
-          activeBaseUrl = candidate; // Simpan host yang berhasil untuk request berikutnya
-          return altResponse;
-        } catch (_) {
-          continue;
-        }
-      }
-      rethrow;
-    }
-  }
-
-  /// 1. Registrasi Akun Siswa Baru (POST /api/siswa/register)
+  // ----------------------------------------------------
+  // Autentikasi Siswa
+  // ----------------------------------------------------
   static Future<Map<String, dynamic>> registerSiswa({
     required String nama,
     required String email,
@@ -79,792 +39,143 @@ class ApiService {
     required String noKelas,
     String? noAbsen,
     required String sandi,
-  }) async {
-    try {
-      final response = await _sendRequest((baseUrl) {
-        return http.post(
-          Uri.parse('$baseUrl/siswa/register'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode({
-            'nama': nama,
-            'email': email,
-            'nisn': nisn,
-            'kelas': kelas,
-            'jurusan': jurusan,
-            'no_kelas': noKelas,
-          if (noAbsen != null && noAbsen.isNotEmpty) 'no_absen': noAbsen,
-          'sandi': sandi,
-          }),
-        );
-      });
+  }) =>
+      AuthService.registerSiswa(
+        nama: nama,
+        email: email,
+        nisn: nisn,
+        kelas: kelas,
+        jurusan: jurusan,
+        noKelas: noKelas,
+        noAbsen: noAbsen,
+        sandi: sandi,
+      );
 
-      final Map<String, dynamic> body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final token = body['token']?.toString();
-        final siswa = SiswaModel.fromJson(body['data'], token: token);
-        return {
-          'success': true,
-          'message': body['message'] ?? 'Registrasi berhasil!',
-          'token': token,
-          'siswa': siswa,
-        };
-      } else {
-        String errorMsg = body['message'] ?? 'Gagal mendaftar!';
-        if (body['errors'] != null && body['errors'] is Map) {
-          final errors = body['errors'] as Map<String, dynamic>;
-          final firstKey = errors.keys.firstOrNull;
-          if (firstKey != null && errors[firstKey] is List && (errors[firstKey] as List).isNotEmpty) {
-            errorMsg = errors[firstKey][0].toString();
-          }
-        }
-        return {
-          'success': false,
-          'message': errorMsg,
-        };
-      }
-    } on SocketException {
-      return {
-        'success': false,
-        'message': 'Gagal terhubung ke backend Laravel. Pastikan php artisan serve & Laragon aktif.',
-      };
-    } on TimeoutException {
-      return {
-        'success': false,
-        'message': 'Koneksi ke server timeout (terlalu lama). Periksa jaringan kamu.',
-      };
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Terjadi kesalahan: $e',
-      };
-    }
-  }
-
-  /// 2. Login Siswa (POST /api/siswa/login)
   static Future<Map<String, dynamic>> loginSiswa({
     String? email,
     String? nisn,
     required String sandi,
-  }) async {
-    try {
-      final response = await _sendRequest((baseUrl) {
-        return http.post(
-          Uri.parse('$baseUrl/siswa/login'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode({
-            if (email != null && email.isNotEmpty) 'email': email,
-            if (nisn != null && nisn.isNotEmpty) 'nisn': nisn,
-            'sandi': sandi,
-          }),
-        );
-      });
+  }) =>
+      AuthService.loginSiswa(email: email, nisn: nisn, sandi: sandi);
 
-      final Map<String, dynamic> body = jsonDecode(response.body);
+  static Future<Map<String, dynamic>> lupaSandiSiswa({required String email}) =>
+      AuthService.lupaSandiSiswa(email: email);
 
-      if (response.statusCode == 200) {
-        final token = body['token']?.toString();
-        final siswa = SiswaModel.fromJson(body['data'], token: token);
-        return {
-          'success': true,
-          'message': body['message'] ?? 'Login berhasil!',
-          'token': token,
-          'siswa': siswa,
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Email/NISN atau kata sandi salah!',
-        };
-      }
-    } on SocketException {
-      return {
-        'success': false,
-        'message': 'Tidak dapat terhubung ke server Laravel. Pastikan backend aktif.',
-      };
-    } on TimeoutException {
-      return {
-        'success': false,
-        'message': 'Koneksi timeout. Silakan coba beberapa saat lagi.',
-      };
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Terjadi kesalahan koneksi: $e',
-      };
-    }
-  }
+  static Future<Map<String, dynamic>> getProfilSiswa({required String token}) =>
+      AuthService.getProfilSiswa(token: token);
 
-  /// 3. Lupa Sandi Siswa (POST /api/siswa/lupa-sandi)
-  static Future<Map<String, dynamic>> lupaSandiSiswa({
-    required String email,
-  }) async {
-    try {
-      final response = await _sendRequest((baseUrl) {
-        return http.post(
-          Uri.parse('$baseUrl/siswa/lupa-sandi'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode({
-            'email': email,
-          }),
-        );
-      });
+  static Future<bool> logoutSiswa({required String token}) =>
+      AuthService.logoutSiswa(token: token);
 
-      final Map<String, dynamic> body = jsonDecode(response.body);
+  // ----------------------------------------------------
+  // Modul Materi & Reading
+  // ----------------------------------------------------
+  static Set<int> get completedMateriIds => MateriService.completedMateriIds;
+  static bool isMateriCompleted(int id) => MateriService.isMateriCompleted(id);
+  static void markMateriCompleted(int id) => MateriService.markMateriCompleted(id);
 
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'message': body['message'] ?? 'Kode reset sandi telah dikirim ke email kamu.',
-          'data': body['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Alamat email tidak ditemukan!',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal memproses permintaan lupa sandi: $e',
-      };
-    }
-  }
-
-  /// 4. Ambil Profil Siswa Sesi Aktif (GET /api/siswa/me)
-  static Future<Map<String, dynamic>> getProfilSiswa({
-    required String token,
-  }) async {
-    try {
-      final response = await _sendRequest((baseUrl) {
-        return http.get(
-          Uri.parse('$baseUrl/siswa/me'),
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-        );
-      });
-
-      final Map<String, dynamic> body = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        final siswa = SiswaModel.fromJson(body['data'], token: token);
-        return {
-          'success': true,
-          'siswa': siswa,
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Sesi telah kedaluwarsa.',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal memuat profil siswa: $e',
-      };
-    }
-  }
-
-  /// 5. Logout Siswa (POST /api/siswa/logout)
-  static Future<bool> logoutSiswa({required String token}) async {
-    try {
-      final response = await _sendRequest((baseUrl) {
-        return http.post(
-          Uri.parse('$baseUrl/siswa/logout'),
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-        );
-      });
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /// 6. Ambil Daftar Materi Pembelajaran Siswa (GET /api/materi)
   static Future<Map<String, dynamic>> getDaftarMateri({
     String? kelas,
     String? kategori,
     int? siswaId,
-  }) async {
-    try {
-      final queryParams = <String, String>{};
-      if (kelas != null && kelas.trim().isNotEmpty) {
-        queryParams['kelas'] = kelas.trim();
-      }
-      if (kategori != null &&
-          kategori.trim().isNotEmpty &&
-          kategori.toLowerCase() != 'all' &&
-          kategori.toLowerCase() != 'semua') {
-        queryParams['kategori'] = kategori.trim();
-      }
-      if (siswaId != null) {
-        queryParams['siswa_id'] = siswaId.toString();
-      }
+  }) =>
+      MateriService.getDaftarMateri(kelas: kelas, kategori: kategori, siswaId: siswaId);
 
-      final response = await _sendRequest((baseUrl) {
-        final uri = Uri.parse('$baseUrl/materi').replace(
-          queryParameters: queryParams.isNotEmpty ? queryParams : null,
-        );
-        return http.get(
-          uri,
-          headers: {
-            'Accept': 'application/json',
-          },
-        );
-      });
+  static Future<Map<String, dynamic>> getDetailMateri(int id) =>
+      MateriService.getDetailMateri(id);
 
-      final Map<String, dynamic> body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        final List<dynamic> listRaw = body['data'] ?? [];
-        for (final item in listRaw) {
-          if (item is Map<String, dynamic> && item['is_completed'] == true) {
-            final id = int.tryParse(item['id']?.toString() ?? '');
-            if (id != null) completedMateriIds.add(id);
-          }
-        }
-        final items = listRaw
-            .map((e) => MateriItemData.fromJson(e as Map<String, dynamic>))
-            .toList();
-        return {
-          'success': true,
-          'data': items,
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Gagal memuat materi pembelajaran.',
-          'data': <MateriItemData>[],
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal terhubung ke server materi: $e',
-        'data': <MateriItemData>[],
-      };
-    }
-  }
-
-  /// 7. Ambil Detail Materi & Butir Soal Lengkap (GET /api/materi/{id})
-  static Future<Map<String, dynamic>> getDetailMateri(int id) async {
-    try {
-      final response = await _sendRequest((baseUrl) {
-        return http.get(
-          Uri.parse('$baseUrl/materi/$id'),
-          headers: {
-            'Accept': 'application/json',
-          },
-        );
-      });
-
-      final Map<String, dynamic> body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        return {
-          'success': true,
-          'data': body['data'] as Map<String, dynamic>,
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Materi tidak ditemukan.',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal memuat detail materi: $e',
-      };
-    }
-  }
-
-  /// 8. Tandai Modul Materi Telah Selesai (POST /api/materi/{id}/selesai)
   static Future<Map<String, dynamic>> selesaikanMateri({
     required int materiId,
     int? siswaId,
     int? skor,
     int? xpReward,
     Map<String, String>? jawaban,
-  }) async {
-    completedMateriIds.add(materiId);
-    try {
-      final payload = <String, dynamic>{
-        'skor': skor ?? 100,
-        'xp_reward': xpReward ?? 50,
-      };
-      if (siswaId != null) {
-        payload['siswa_id'] = siswaId;
-      }
-      if (jawaban != null && jawaban.isNotEmpty) {
-        payload['jawaban'] = jawaban;
-      }
+  }) =>
+      MateriService.selesaikanMateri(
+        materiId: materiId,
+        siswaId: siswaId,
+        skor: skor,
+        xpReward: xpReward,
+        jawaban: jawaban,
+      );
 
-      final response = await _sendRequest((baseUrl) {
-        return http.post(
-          Uri.parse('$baseUrl/materi/$materiId/selesai'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode(payload),
-        );
-      });
+  static Future<Map<String, dynamic>> getProgresMateri({int? siswaId}) =>
+      MateriService.getProgresMateri(siswaId: siswaId);
 
-      final Map<String, dynamic> body = jsonDecode(response.body);
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        return {
-          'success': true,
-          'data': body['data'],
-        };
-      }
-    } catch (_) {}
-    return {'success': true};
-  }
+  // ----------------------------------------------------
+  // Modul Listening Audio
+  // ----------------------------------------------------
+  static Set<int> get completedListeningIds => ListeningService.completedListeningIds;
+  static bool isListeningCompleted(int id) => ListeningService.isListeningCompleted(id);
+  static void markListeningCompleted(int id) => ListeningService.markListeningCompleted(id);
 
-  /// 9. Ambil Ringkasan Progres Belajar Materi (GET /api/materi/progres)
-  static Future<Map<String, dynamic>> getProgresMateri({int? siswaId}) async {
-    try {
-      final queryParams = <String, String>{};
-      if (siswaId != null) {
-        queryParams['siswa_id'] = siswaId.toString();
-      }
-
-      final response = await _sendRequest((baseUrl) {
-        final uri = Uri.parse('$baseUrl/materi/progres').replace(
-          queryParameters: queryParams.isNotEmpty ? queryParams : null,
-        );
-        return http.get(
-          uri,
-          headers: {'Accept': 'application/json'},
-        );
-      });
-
-      final Map<String, dynamic> body = jsonDecode(response.body);
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        final data = body['data'] as Map<String, dynamic>? ?? {};
-        final List<dynamic> doneIds = data['completed_materi_ids'] ?? [];
-        for (final id in doneIds) {
-          final idInt = int.tryParse(id.toString());
-          if (idInt != null) completedMateriIds.add(idInt);
-        }
-
-        return {
-          'success': true,
-          'data': data,
-        };
-      }
-    } catch (_) {}
-
-    final total = 4;
-    final selesai = completedMateriIds.length;
-    final persen = total > 0 ? ((selesai / total) * 100).round() : 0;
-    return {
-      'success': true,
-      'data': {
-        'total_materi': total,
-        'materi_selesai': selesai,
-        'persentase': persen.clamp(0, 100),
-        'completed_materi_ids': completedMateriIds.toList(),
-      },
-    };
-  }
-
-  /// Cache ID modul listening yang telah diselesaikan siswa
-  static final Set<int> completedListeningIds = {};
-
-  static bool isListeningCompleted(int id) => completedListeningIds.contains(id);
-
-  static void markListeningCompleted(int id) {
-    completedListeningIds.add(id);
-  }
-
-  /// 10. Ambil Daftar Modul Listening Siswa (GET /api/listening)
   static Future<Map<String, dynamic>> getDaftarListening({
     String? tingkat,
     String? kelas,
     int? siswaId,
-  }) async {
-    try {
-      final queryParams = <String, String>{};
-      if (tingkat != null &&
-          tingkat.trim().isNotEmpty &&
-          tingkat.toLowerCase() != 'all' &&
-          tingkat.toLowerCase() != 'semua') {
-        queryParams['tingkat'] = tingkat.trim();
-      }
-      if (kelas != null && kelas.trim().isNotEmpty) {
-        queryParams['kelas'] = kelas.trim();
-      }
-      if (siswaId != null) {
-        queryParams['siswa_id'] = siswaId.toString();
-      }
+  }) =>
+      ListeningService.getDaftarListening(tingkat: tingkat, kelas: kelas, siswaId: siswaId);
 
-      final response = await _sendRequest((baseUrl) {
-        final uri = Uri.parse('$baseUrl/listening').replace(
-          queryParameters: queryParams.isNotEmpty ? queryParams : null,
-        );
-        return http.get(
-          uri,
-          headers: {'Accept': 'application/json'},
-        );
-      });
+  static Future<Map<String, dynamic>> getDetailListening(int id) =>
+      ListeningService.getDetailListening(id);
 
-      final Map<String, dynamic> body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        final List<dynamic> listRaw = body['data'] ?? [];
-        for (final item in listRaw) {
-          if (item is Map<String, dynamic> && item['is_completed'] == true) {
-            final id = int.tryParse(item['id']?.toString() ?? '');
-            if (id != null) completedListeningIds.add(id);
-          }
-        }
-        return {
-          'success': true,
-          'data': listRaw,
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Gagal memuat modul listening.',
-          'data': [],
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal terhubung ke server listening: $e',
-        'data': [],
-      };
-    }
-  }
-
-  /// 11. Ambil Detail Modul Listening & Butir Soal Lengkap (GET /api/listening/{id})
-  static Future<Map<String, dynamic>> getDetailListening(int id) async {
-    try {
-      final response = await _sendRequest((baseUrl) {
-        return http.get(
-          Uri.parse('$baseUrl/listening/$id'),
-          headers: {'Accept': 'application/json'},
-        );
-      });
-
-      final Map<String, dynamic> body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        return {
-          'success': true,
-          'data': body['data'] as Map<String, dynamic>,
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Modul listening tidak ditemukan.',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal memuat detail modul listening: $e',
-      };
-    }
-  }
-
-  /// 12. Tandai Modul Listening Telah Selesai (POST /api/listening/{id}/selesai)
   static Future<Map<String, dynamic>> selesaikanListening({
     required int listeningId,
     int? siswaId,
     int? skor,
     int? xpReward,
     Map<String, String>? jawaban,
-  }) async {
-    completedListeningIds.add(listeningId);
-    try {
-      final payload = <String, dynamic>{
-        'skor': skor ?? 100,
-        'xp_reward': xpReward ?? 50,
-      };
-      if (siswaId != null) {
-        payload['siswa_id'] = siswaId;
-      }
-      if (jawaban != null && jawaban.isNotEmpty) {
-        payload['jawaban'] = jawaban;
-      }
+  }) =>
+      ListeningService.selesaikanListening(
+        listeningId: listeningId,
+        siswaId: siswaId,
+        skor: skor,
+        xpReward: xpReward,
+        jawaban: jawaban,
+      );
 
-      final response = await _sendRequest((baseUrl) {
-        return http.post(
-          Uri.parse('$baseUrl/listening/$listeningId/selesai'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode(payload),
-        );
-      });
+  // ----------------------------------------------------
+  // Modul Bank Soal & Kuis
+  // ----------------------------------------------------
+  static Set<int> get completedQuizIds => QuizService.completedQuizIds;
+  static bool isQuizCompleted(int id) => QuizService.isQuizCompleted(id);
+  static void markQuizCompleted(int id) => QuizService.markQuizCompleted(id);
 
-      final Map<String, dynamic> body = jsonDecode(response.body);
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        return {
-          'success': true,
-          'data': body['data'],
-        };
-      }
-    } catch (_) {}
-    return {'success': true};
-  }
-
-  /// Cache ID kuis yang telah diselesaikan siswa
-  static final Set<int> completedQuizIds = {};
-
-  static bool isQuizCompleted(int id) => completedQuizIds.contains(id);
-
-  static void markQuizCompleted(int id) {
-    completedQuizIds.add(id);
-  }
-
-  /// 13. Ambil Daftar Kuis Siswa (GET /api/quiz)
   static Future<Map<String, dynamic>> getDaftarQuiz({
     String? kategori,
     String? kelas,
     int? siswaId,
-  }) async {
-    try {
-      final queryParams = <String, String>{};
-      if (kategori != null &&
-          kategori.trim().isNotEmpty &&
-          kategori.toLowerCase() != 'all' &&
-          kategori.toLowerCase() != 'semua') {
-        queryParams['kategori'] = kategori.trim();
-      }
-      if (kelas != null && kelas.trim().isNotEmpty) {
-        queryParams['kelas'] = kelas.trim();
-      }
-      if (siswaId != null) {
-        queryParams['siswa_id'] = siswaId.toString();
-      }
+  }) =>
+      QuizService.getDaftarQuiz(kategori: kategori, kelas: kelas, siswaId: siswaId);
 
-      final response = await _sendRequest((baseUrl) {
-        final uri = Uri.parse('$baseUrl/quiz').replace(
-          queryParameters: queryParams.isNotEmpty ? queryParams : null,
-        );
-        return http.get(
-          uri,
-          headers: {'Accept': 'application/json'},
-        );
-      });
+  static Future<Map<String, dynamic>> joinQuizRoom(String kodeRoom) =>
+      QuizService.joinQuizRoom(kodeRoom);
 
-      final Map<String, dynamic> body = jsonDecode(response.body);
+  static Future<Map<String, dynamic>> getDetailQuiz(int id) =>
+      QuizService.getDetailQuiz(id);
 
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        final List<dynamic> listRaw = body['data'] ?? [];
-        for (final item in listRaw) {
-          if (item is Map<String, dynamic> && item['is_completed'] == true) {
-            final id = int.tryParse(item['id']?.toString() ?? '');
-            if (id != null) completedQuizIds.add(id);
-          }
-        }
-        return {
-          'success': true,
-          'data': listRaw,
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Gagal memuat daftar kuis.',
-          'data': [],
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal terhubung ke server kuis: $e',
-        'data': [],
-      };
-    }
-  }
-
-  /// 14. Bergabung Room Kuis dengan Kode Unik (POST /api/quiz/join-room)
-  static Future<Map<String, dynamic>> joinQuizRoom(String kodeRoom) async {
-    try {
-      final response = await _sendRequest((baseUrl) {
-        return http.post(
-          Uri.parse('$baseUrl/quiz/join-room'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode({'kode_room': kodeRoom.trim().toUpperCase()}),
-        );
-      });
-
-      final Map<String, dynamic> body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        return {
-          'success': true,
-          'message': body['message'] ?? 'Room kuis ditemukan!',
-          'data': body['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Kode room tidak valid atau kuis belum aktif.',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal bergabung ke room kuis: $e',
-      };
-    }
-  }
-
-  /// 15. Ambil Detail Kuis & Butir Soal Lengkap (GET /api/quiz/{id})
-  static Future<Map<String, dynamic>> getDetailQuiz(int id) async {
-    try {
-      final response = await _sendRequest((baseUrl) {
-        return http.get(
-          Uri.parse('$baseUrl/quiz/$id'),
-          headers: {'Accept': 'application/json'},
-        );
-      });
-
-      final Map<String, dynamic> body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        return {
-          'success': true,
-          'data': body['data'] as Map<String, dynamic>,
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Paket kuis tidak ditemukan.',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal memuat detail kuis: $e',
-      };
-    }
-  }
-
-  /// 16. Kirim Jawaban Kuis Siswa & Evaluasi Nilai (+ XP Reward) (POST /api/quiz/{id}/submit)
   static Future<Map<String, dynamic>> submitQuizAnswers({
     required int quizId,
     int? siswaId,
     required Map<String, String> jawaban,
     int? waktuPengerjaanDetik,
-  }) async {
-    completedQuizIds.add(quizId);
-    try {
-      final payload = <String, dynamic>{
-        'jawaban': jawaban,
-        'waktu_pengerjaan_detik': waktuPengerjaanDetik ?? 0,
-      };
-      if (siswaId != null) {
-        payload['siswa_id'] = siswaId;
-      }
+  }) =>
+      QuizService.submitQuizAnswers(
+        quizId: quizId,
+        siswaId: siswaId,
+        jawaban: jawaban,
+        waktuPengerjaanDetik: waktuPengerjaanDetik,
+      );
 
-      final response = await _sendRequest((baseUrl) {
-        return http.post(
-          Uri.parse('$baseUrl/quiz/$quizId/submit'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode(payload),
-        );
-      });
-
-      final Map<String, dynamic> body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        return {
-          'success': true,
-          'message': body['message'] ?? 'Kuis berhasil diselesaikan!',
-          'data': body['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Gagal mengirim jawaban kuis.',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal mengirim jawaban kuis: $e',
-      };
-    }
-  }
-
-  /// 10. Ambil Progres Puzzle Siswa (GET /api/puzzle/progres)
+  // ----------------------------------------------------
+  // Mini Game Puzzle
+  // ----------------------------------------------------
   static Future<Map<String, dynamic>> getPuzzleProgres({
     int? siswaId,
     String difficulty = 'mudah',
-  }) async {
-    try {
-      final queryParams = <String, String>{
-        'difficulty': difficulty.toLowerCase(),
-      };
-      if (siswaId != null) {
-        queryParams['siswa_id'] = siswaId.toString();
-      }
+  }) =>
+      PuzzleService.getPuzzleProgres(siswaId: siswaId, difficulty: difficulty);
 
-      final response = await _sendRequest((baseUrl) {
-        final uri = Uri.parse('$baseUrl/puzzle/progres').replace(
-          queryParameters: queryParams,
-        );
-        return http.get(
-          uri,
-          headers: {'Accept': 'application/json'},
-        );
-      });
-
-      final Map<String, dynamic> body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        return {
-          'success': true,
-          'koin': body['koin'] ?? 120,
-          'data': body['data'] ?? [],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Gagal memuat progres puzzle.',
-          'data': [],
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal koneksi ke server puzzle: $e',
-        'data': [],
-      };
-    }
-  }
-
-  /// 11. Simpan Penyelesaian Puzzle Siswa (POST /api/puzzle/selesai)
   static Future<Map<String, dynamic>> submitPuzzleSelesai({
     int? siswaId,
     required String difficulty,
@@ -872,84 +183,22 @@ class ApiService {
     required int stars,
     required String timeSpent,
     required int coinsEarned,
-  }) async {
-    try {
-      final payload = {
-        if (siswaId != null) 'siswa_id': siswaId,
-        'difficulty': difficulty.toLowerCase(),
-        'level': level,
-        'stars': stars,
-        'time_spent': timeSpent,
-        'coins_earned': coinsEarned,
-      };
+  }) =>
+      PuzzleService.submitPuzzleSelesai(
+        siswaId: siswaId,
+        difficulty: difficulty,
+        level: level,
+        stars: stars,
+        timeSpent: timeSpent,
+        coinsEarned: coinsEarned,
+      );
 
-      final response = await _sendRequest((baseUrl) {
-        return http.post(
-          Uri.parse('$baseUrl/puzzle/selesai'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode(payload),
-        );
-      });
+  // ----------------------------------------------------
+  // Profil & Kenaikan Kelas Siswa
+  // ----------------------------------------------------
+  static Future<Map<String, dynamic>> getStatusAkademik({int? siswaId}) =>
+      SiswaService.getStatusAkademik(siswaId: siswaId);
 
-      final Map<String, dynamic> body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        return {
-          'success': true,
-          'message': body['message'] ?? 'Progres puzzle berhasil disimpan!',
-          'koin': body['koin'] ?? 120,
-          'data': body['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': body['message'] ?? 'Gagal menyimpan progres puzzle.',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal koneksi saat menyimpan progres puzzle: $e',
-      };
-    }
-  }
-
-  /// 17. Ambil Status Akademik & Periode Kenaikan Kelas (GET /api/siswa/status-akademik)
-  static Future<Map<String, dynamic>> getStatusAkademik({int? siswaId}) async {
-    try {
-      final response = await _sendRequest((baseUrl) {
-        final queryParams = <String, String>{};
-        if (siswaId != null) queryParams['siswa_id'] = siswaId.toString();
-        final uri = Uri.parse('$baseUrl/siswa/status-akademik').replace(
-          queryParameters: queryParams.isNotEmpty ? queryParams : null,
-        );
-        return http.get(uri, headers: {'Accept': 'application/json'});
-      });
-
-      final Map<String, dynamic> body = jsonDecode(response.body);
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        return {
-          'success': true,
-          'data': body['data'],
-        };
-      }
-
-      return {
-        'success': false,
-        'message': body['message'] ?? 'Gagal mengambil status akademik.',
-      };
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal memeriksa status akademik: $e',
-      };
-    }
-  }
-
-  /// 18. Perbarui Profil Siswa & Kenaikan Kelas (POST /api/siswa/update-profil)
   static Future<Map<String, dynamic>> updateProfilSiswa({
     required int siswaId,
     String? namaLengkap,
@@ -959,63 +208,15 @@ class ApiService {
     String? noAbsen,
     String? sandiLama,
     String? sandiBaru,
-  }) async {
-    try {
-      final payload = <String, dynamic>{
-        'siswa_id': siswaId,
-      };
-      if (namaLengkap != null && namaLengkap.isNotEmpty) {
-        payload['nama_lengkap'] = namaLengkap;
-      }
-      if (kelasLengkap != null && kelasLengkap.isNotEmpty) {
-        payload['kelas_lengkap'] = kelasLengkap;
-      }
-      if (kelas != null && kelas.isNotEmpty) {
-        payload['kelas'] = kelas;
-      }
-      if (noKelas != null && noKelas.isNotEmpty) {
-        payload['no_kelas'] = noKelas;
-      }
-      if (noAbsen != null && noAbsen.isNotEmpty) {
-        payload['no_absen'] = noAbsen;
-      }
-      if (sandiLama != null && sandiLama.isNotEmpty) {
-        payload['sandi_lama'] = sandiLama;
-      }
-      if (sandiBaru != null && sandiBaru.isNotEmpty) {
-        payload['sandi_baru'] = sandiBaru;
-      }
-
-      final response = await _sendRequest((baseUrl) {
-        return http.post(
-          Uri.parse('$baseUrl/siswa/update-profil'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode(payload),
-        );
-      });
-
-      final Map<String, dynamic> body = jsonDecode(response.body);
-      if (response.statusCode == 200 && body['status'] == 'success') {
-        final updatedSiswa = SiswaModel.fromJson(body['data']);
-        return {
-          'success': true,
-          'message': body['message'] ?? 'Profil berhasil diperbarui!',
-          'siswa': updatedSiswa,
-        };
-      }
-
-      return {
-        'success': false,
-        'message': body['message'] ?? 'Gagal memperbarui profil (${response.statusCode})',
-      };
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal memperbarui profil: $e',
-      };
-    }
-  }
+  }) =>
+      SiswaService.updateProfilSiswa(
+        siswaId: siswaId,
+        namaLengkap: namaLengkap,
+        kelasLengkap: kelasLengkap,
+        kelas: kelas,
+        noKelas: noKelas,
+        noAbsen: noAbsen,
+        sandiLama: sandiLama,
+        sandiBaru: sandiBaru,
+      );
 }
