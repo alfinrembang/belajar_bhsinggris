@@ -13,6 +13,7 @@ import 'sections/game_grid_section.dart';
 import 'sections/game_header_section.dart';
 import 'sections/game_leaderboard_section.dart';
 import 'puzzle/puzzle_home_page.dart';
+import 'fishing/fishing_home_page.dart';
 
 /// Halaman Utama Game Edukasi Siswa.
 /// Disusun secara modular menggunakan sub-sections terpisah,
@@ -44,13 +45,14 @@ class _GameSiswaPageState extends State<GameSiswaPage> {
       customIcon: Icons.extension_rounded,
     ),
     GameItemData(
-      id: 'g2',
-      title: 'Rangkai Kata',
-      description: 'Permainan Merangkai Kata, Rangkai Kata dengan Benar',
+      id: 'word_fishing',
+      title: 'Tangkap Ikan',
+      description: 'Tangkap ikan impian sambil asah kosakata!',
       category: 'vocabulary',
-      themeColor: Color(0xFFA855F7), // Ungu
-      badgeColor: Color(0xFFC084FC),
-      badgeText: 'Tt Kata',
+      themeColor: Color(0xFF0EA5E9), // Biru Laut Cerah
+      badgeColor: Color(0xFF7DD3FC),
+      badgeText: '🐠 Tangkap Ikan',
+      customIcon: Icons.set_meal_rounded,
     ),
     GameItemData(
       id: 'g3',
@@ -212,10 +214,19 @@ class _GameSiswaPageState extends State<GameSiswaPage> {
                           transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
                         ),
                       );
+                    } else if (game.id == 'word_fishing') {
+                      Navigator.push(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder: (c, a, s) => FishingHomePage(siswa: widget.siswa),
+                          transitionDuration: const Duration(milliseconds: 350),
+                          transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
+                        ),
+                      );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Memulai permainan ${game.title}...'),
+                          content: Text('Permainan ${game.title} segera hadir!'),
                           duration: const Duration(seconds: 2),
                         ),
                       );

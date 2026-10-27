@@ -73,29 +73,24 @@ class GameGridSection extends StatelessWidget {
   }
 
   Widget _buildGameCard(BuildContext context, GameItemData item) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _handleCardTap(context, item),
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        child: Container(
-          padding: const EdgeInsets.all(13),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: const Color(0xFFF1F5F9),
-              width: 1.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        border: Border.all(
+          color: const Color(0xFFF1F5F9),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
-          child: Column(
+        ],
+      ),
+      child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -123,15 +118,20 @@ class GameGridSection extends StatelessWidget {
                           ),
                   ),
 
-                  // Pill Badge Menggunakan MateriBadge Reusable
-                  MateriBadge(
-                    category: item.category,
-                    customText: item.badgeText,
-                    customBgColor: item.badgeColor,
-                    customTextColor: Colors.white,
-                    fontSize: 10,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                    borderRadius: BorderRadius.circular(10),
+                  // Pill Badge Menggunakan MateriBadge Reusable (Aman dari overflow di layar kecil)
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: MateriBadge(
+                        category: item.category,
+                        customText: item.badgeText,
+                        customBgColor: item.badgeColor,
+                        customTextColor: Colors.white,
+                        fontSize: 10,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -184,9 +184,7 @@ class GameGridSection extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
+        );
   }
 
   void _handleCardTap(BuildContext context, GameItemData item) {

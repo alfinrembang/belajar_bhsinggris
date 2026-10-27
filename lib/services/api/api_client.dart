@@ -5,8 +5,8 @@ import 'package:http/http.dart' as http;
 class ApiClient {
   // Alamat server: mendukung koneksi via USB (ADB Reverse), Wi-Fi lokal, dan Emulator
   static const List<String> candidateUrls = [
+    'http://127.0.0.1:8000/api',     // Localhost / USB / ADB Reverse / Web (prioritas cepat)
     'http://192.168.1.20:8000/api', // IP Wi-Fi lokal laptop saat ini
-    'http://127.0.0.1:8000/api',     // USB / ADB Reverse
     'http://10.0.2.2:8000/api',      // Android Emulator
   ];
 

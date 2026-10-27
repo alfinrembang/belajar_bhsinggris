@@ -7,6 +7,7 @@ export 'api/materi_service.dart';
 export 'api/listening_service.dart';
 export 'api/quiz_service.dart';
 export 'api/puzzle_service.dart';
+export 'api/fishing_service.dart';
 export 'api/siswa_service.dart';
 
 import 'api/api_client.dart';
@@ -15,6 +16,7 @@ import 'api/materi_service.dart';
 import 'api/listening_service.dart';
 import 'api/quiz_service.dart';
 import 'api/puzzle_service.dart';
+import 'api/fishing_service.dart';
 import 'api/siswa_service.dart';
 
 /// Facade untuk menjaga kompatibilitas mundur (backward-compatible)
@@ -190,6 +192,50 @@ class ApiService {
         level: level,
         stars: stars,
         timeSpent: timeSpent,
+        coinsEarned: coinsEarned,
+      );
+
+  // ----------------------------------------------------
+  // Mini Game Word Fishing (Pancing Kata)
+  // ----------------------------------------------------
+  static Future<Map<String, dynamic>> getFishingSoal({
+    int level = 1,
+    String difficulty = 'mudah',
+    int limit = 5,
+  }) =>
+      FishingService.getFishingSoal(
+        level: level,
+        difficulty: difficulty,
+        limit: limit,
+      );
+
+  static Future<Map<String, dynamic>> getFishingProgres({
+    int? siswaId,
+    String difficulty = 'mudah',
+  }) =>
+      FishingService.getFishingProgres(
+        siswaId: siswaId,
+        difficulty: difficulty,
+      );
+
+  static Future<Map<String, dynamic>> submitFishingSelesai({
+    int? siswaId,
+    required String difficulty,
+    required int level,
+    required int stars,
+    required int score,
+    String? fishName,
+    String? fishEmoji,
+    required int coinsEarned,
+  }) =>
+      FishingService.submitFishingSelesai(
+        siswaId: siswaId,
+        difficulty: difficulty,
+        level: level,
+        stars: stars,
+        score: score,
+        fishName: fishName,
+        fishEmoji: fishEmoji,
         coinsEarned: coinsEarned,
       );
 

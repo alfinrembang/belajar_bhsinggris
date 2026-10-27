@@ -90,6 +90,8 @@ class PuzzleService {
           'success': true,
           'message': body['message'] ?? 'Progres puzzle berhasil disimpan!',
           'koin': body['koin'] ?? 120,
+          'coins_awarded': body['coins_awarded'] ??
+              (body['data'] != null ? body['data']['coins_awarded'] : null),
           'data': body['data'],
         };
       } else {
