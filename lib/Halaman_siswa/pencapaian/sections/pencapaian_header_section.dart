@@ -15,9 +15,15 @@ class PencapaianHeaderSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Tombol Hamburger Menu (buka Sidebar)
+        // Tombol Hamburger Menu / Kembali
         GestureDetector(
-          onTap: onMenuTap,
+          onTap: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              onMenuTap();
+            }
+          },
           child: Container(
             width: 38,
             height: 38,
@@ -32,10 +38,12 @@ class PencapaianHeaderSection extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Center(
+            child: Center(
               child: Icon(
-                Icons.menu_rounded,
-                color: Color(0xFF0E4E93),
+                Navigator.canPop(context)
+                    ? Icons.arrow_back_rounded
+                    : Icons.menu_rounded,
+                color: const Color(0xFF0E4E93),
                 size: 20,
               ),
             ),

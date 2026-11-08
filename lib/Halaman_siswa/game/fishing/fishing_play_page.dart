@@ -9,13 +9,103 @@ import '../puzzle/game_coin_manager.dart';
 import 'fishing_how_to_play_dialog.dart';
 import 'fishing_visuals.dart';
 
-/// Model Ikan Laut yang Berenang Bebas di Laut
+/// Model Spesies Ikan Akuarium dari Folder Assets
+class AquariumFishSpecies {
+  final String key;
+  final String name;
+  final String indo;
+  final String assetPath;
+  final double width;
+  final double height;
+
+  const AquariumFishSpecies({
+    required this.key,
+    required this.name,
+    required this.indo,
+    required this.assetPath,
+    this.width = 120.0,
+    this.height = 84.0,
+  });
+}
+
+/// 8 Aset Gambar Ikan Chibi Asli di assets/images/ikan/ (Ukuran Diperbesar ~35-40%)
+const List<AquariumFishSpecies> kAquariumFishSpeciesList = [
+  AquariumFishSpecies(
+    key: 'clownfish',
+    name: 'Clownfish',
+    indo: 'Ikan Badut Kotak',
+    assetPath: 'assets/images/ikan/Ikan Badut Kotak yang Menggemaskan.png',
+    width: 122.0,
+    height: 85.0,
+  ),
+  AquariumFishSpecies(
+    key: 'tuna',
+    name: 'Bluefin Tuna',
+    indo: 'Ikan Tuna Chibi',
+    assetPath: 'assets/images/ikan/Tuna Chibi Biru Kuning yang Ceria.png',
+    width: 135.0,
+    height: 85.0,
+  ),
+  AquariumFishSpecies(
+    key: 'pufferfish',
+    name: 'Pufferfish',
+    indo: 'Ikan Buntal Kuning',
+    assetPath: 'assets/images/ikan/Pufferfish Chibi Kuning Menggemaskan.png',
+    width: 118.0,
+    height: 90.0,
+  ),
+  AquariumFishSpecies(
+    key: 'seahorse',
+    name: 'Seahorse',
+    indo: 'Kuda Laut Kawaii',
+    assetPath: 'assets/images/ikan/Kuda Laut Kawaii Kuning Ceria.png',
+    width: 90.0,
+    height: 122.0,
+  ),
+  AquariumFishSpecies(
+    key: 'louhan',
+    name: 'Flowerhorn',
+    indo: 'Ikan Louhan Mutiara',
+    assetPath: 'assets/images/ikan/Louhan Kawaii dengan Kok Mutiara.png',
+    width: 128.0,
+    height: 88.0,
+  ),
+  AquariumFishSpecies(
+    key: 'shark',
+    name: 'Frilled Shark',
+    indo: 'Hiu Frill Chibi',
+    assetPath: 'assets/images/ikan/Hiu Frill Chibi Menggemaskan.png',
+    width: 148.0,
+    height: 74.0,
+  ),
+  AquariumFishSpecies(
+    key: 'anglerfish',
+    name: 'Anglerfish',
+    indo: 'Ikan Pemancing Berpijar',
+    assetPath: 'assets/images/ikan/Ikan Pemancing Chibi Berpijar.png',
+    width: 135.0,
+    height: 88.0,
+  ),
+  AquariumFishSpecies(
+    key: 'squid',
+    name: 'Blue Squid',
+    indo: 'Sotong Biru Ceria',
+    assetPath: 'assets/images/ikan/Sotong Biru Chibi Ceria.png',
+    width: 108.0,
+    height: 108.0,
+  ),
+];
+
+/// Model Ikan Akuarium yang Berenang Bebas di Tangki Air
 class LiveOceanFish {
   final int id;
   final Map<String, dynamic> question;
-  final String species; // clownfish, bluetang, yellowtang, angelfish, reef
+  final String species;
   final String speciesName;
   final String speciesIndo;
+  final String assetPath;
+  final double width;
+  final double height;
 
   double x; // Posisi horizontal (piksel)
   double y; // Posisi vertikal (piksel)
@@ -31,6 +121,9 @@ class LiveOceanFish {
     required this.species,
     required this.speciesName,
     required this.speciesIndo,
+    required this.assetPath,
+    this.width = 120.0,
+    this.height = 84.0,
     required this.x,
     required this.y,
     required this.vx,
@@ -41,7 +134,7 @@ class LiveOceanFish {
   });
 }
 
-/// Model Partikel Gelembung Udara di Lautan
+/// Model Partikel Gelembung Udara di Akuarium
 class OceanBubble {
   double x;
   double y;
@@ -49,6 +142,9 @@ class OceanBubble {
   double speed;
   double wobble;
   double wobbleSpeed;
+  double opacity;
+  bool isAerator;
+  bool isLeftColumn;
 
   OceanBubble({
     required this.x,
@@ -57,6 +153,9 @@ class OceanBubble {
     required this.speed,
     required this.wobble,
     required this.wobbleSpeed,
+    this.opacity = 0.75,
+    this.isAerator = false,
+    this.isLeftColumn = true,
   });
 }
 
@@ -90,6 +189,10 @@ class _FishingPlayPageState extends State<FishingPlayPage>
   int _score = 0;
   bool _isGameOver = false;
   bool _isGameWon = false;
+
+  // Waktu Countdown 1 Menit (60 Detik)
+  int _gameTimerSeconds = 60;
+  Timer? _gameTimer;
 
   // Ukuran Kanvas Laut (Dihitung dari LayoutBuilder)
   Size _seaSize = const Size(360, 500);
@@ -186,16 +289,55 @@ class _FishingPlayPageState extends State<FishingPlayPage>
   }
 
   void _initBubbles() {
-    _bubbles = List.generate(20, (index) {
-      return OceanBubble(
-        x: _rng.nextDouble() * 360.0,
-        y: _rng.nextDouble() * 560.0,
-        size: 7.0 + _rng.nextDouble() * 11.0,
-        speed: 0.9 + _rng.nextDouble() * 1.5,
-        wobble: _rng.nextDouble() * 2 * pi,
-        wobbleSpeed: 0.03 + _rng.nextDouble() * 0.03,
+    _bubbles = [];
+    // 1. Kolom Gelembung Aerator Kiri (Khas Batu Aerator Akuarium)
+    for (int i = 0; i < 7; i++) {
+      _bubbles.add(
+        OceanBubble(
+          x: 25.0 + _rng.nextDouble() * 35.0,
+          y: _rng.nextDouble() * 560.0,
+          size: 5.0 + _rng.nextDouble() * 9.0,
+          speed: 1.3 + _rng.nextDouble() * 1.5,
+          wobble: _rng.nextDouble() * 2 * pi,
+          wobbleSpeed: 0.05 + _rng.nextDouble() * 0.04,
+          opacity: 0.75 + _rng.nextDouble() * 0.2,
+          isAerator: true,
+          isLeftColumn: true,
+        ),
       );
-    });
+    }
+    // 2. Kolom Gelembung Aerator Kanan
+    for (int i = 0; i < 7; i++) {
+      _bubbles.add(
+        OceanBubble(
+          x: 290.0 + _rng.nextDouble() * 35.0,
+          y: _rng.nextDouble() * 560.0,
+          size: 5.0 + _rng.nextDouble() * 9.0,
+          speed: 1.3 + _rng.nextDouble() * 1.5,
+          wobble: _rng.nextDouble() * 2 * pi,
+          wobbleSpeed: 0.05 + _rng.nextDouble() * 0.04,
+          opacity: 0.75 + _rng.nextDouble() * 0.2,
+          isAerator: true,
+          isLeftColumn: false,
+        ),
+      );
+    }
+    // 3. Gelembung Melayang Bebas di Seluruh Tangki Akuarium
+    for (int i = 0; i < 14; i++) {
+      _bubbles.add(
+        OceanBubble(
+          x: _rng.nextDouble() * 360.0,
+          y: _rng.nextDouble() * 560.0,
+          size: 7.0 + _rng.nextDouble() * 12.0,
+          speed: 0.8 + _rng.nextDouble() * 1.2,
+          wobble: _rng.nextDouble() * 2 * pi,
+          wobbleSpeed: 0.03 + _rng.nextDouble() * 0.03,
+          opacity: 0.6 + _rng.nextDouble() * 0.3,
+          isAerator: false,
+          isLeftColumn: false,
+        ),
+      );
+    }
   }
 
   @override
@@ -203,7 +345,35 @@ class _FishingPlayPageState extends State<FishingPlayPage>
     _swimLoopController.dispose();
     _feedingTimer?.cancel();
     _cooldownTimer?.cancel();
+    _gameTimer?.cancel();
     super.dispose();
+  }
+
+  /// Memulai Hitung Mundur Waktu Permainan (60 Detik / 1 Menit)
+  void _startGameTimer() {
+    _gameTimer?.cancel();
+    _gameTimerSeconds = 60;
+    _gameTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_isGameOver || _isGameWon || _isLoading) return;
+
+      setState(() {
+        _gameTimerSeconds--;
+        if (_gameTimerSeconds <= 0) {
+          timer.cancel();
+          _handleTimeOut();
+        }
+      });
+    });
+  }
+
+  String get _timerFormatted {
+    final minutes = (_gameTimerSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (_gameTimerSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 
   /// Memuat Soal dari Database Laravel API
@@ -220,7 +390,7 @@ class _FishingPlayPageState extends State<FishingPlayPage>
       questionList = List.from(_fallbackQuestions);
     }
 
-    // Ambil maksimal 5-6 soal untuk satu sesi permainan
+    // Maksimal 5 soal untuk 1 sesi akuarium agar tetap ringan & fokus
     if (questionList.length > 5) {
       questionList = questionList.take(5).toList();
     }
@@ -232,35 +402,34 @@ class _FishingPlayPageState extends State<FishingPlayPage>
         _isLoading = false;
       });
       _swimLoopController.repeat();
+      _startGameTimer();
     }
   }
 
-  /// Menghasilkan Ikan-Ikan Laut Sesuai Jumlah Soal
+  /// Menghasilkan Ikan-Ikan Akuarium (Maksimal 5 Ikan, Dipilih Acak dari 8 Aset Gambar)
   void _spawnFishes(List<Map<String, dynamic>> questions) {
-    const speciesPool = [
-      {'species': 'clownfish', 'name': 'Clownfish', 'indo': 'Ikan Badut (Nemo)'},
-      {'species': 'bluetang', 'name': 'Blue Tang', 'indo': 'Ikan Dory'},
-      {'species': 'yellowtang', 'name': 'Yellow Tang', 'indo': 'Ikan Kuning'},
-      {'species': 'angelfish', 'name': 'Coral Angel', 'indo': 'Ikan Bidadari'},
-      {'species': 'ruby', 'name': 'Ruby Reef', 'indo': 'Ikan Karang Merah'},
-    ];
+    final shuffledSpecies = List<AquariumFishSpecies>.from(kAquariumFishSpeciesList)..shuffle(_rng);
+    final count = min(5, questions.length);
 
     final fishes = <LiveOceanFish>[];
-    for (int i = 0; i < questions.length; i++) {
-      final spec = speciesPool[i % speciesPool.length];
+    for (int i = 0; i < count; i++) {
+      final spec = shuffledSpecies[i % shuffledSpecies.length];
       final isRight = _rng.nextBool();
-      final speedX = (0.7 + _rng.nextDouble() * 0.9) * (isRight ? 1 : -1);
-      final speedY = (0.3 + _rng.nextDouble() * 0.5) * (_rng.nextBool() ? 1 : -1);
+      final speedX = (0.7 + _rng.nextDouble() * 0.8) * (isRight ? 1 : -1);
+      final speedY = (0.25 + _rng.nextDouble() * 0.45) * (_rng.nextBool() ? 1 : -1);
 
       fishes.add(
         LiveOceanFish(
           id: i,
           question: questions[i],
-          species: spec['species']!,
-          speciesName: spec['name']!,
-          speciesIndo: spec['indo']!,
-          x: 40.0 + (i * 55.0) % 260.0,
-          y: 60.0 + (i * 70.0) % 320.0,
+          species: spec.key,
+          speciesName: spec.name,
+          speciesIndo: spec.indo,
+          assetPath: spec.assetPath,
+          width: spec.width,
+          height: spec.height,
+          x: 30.0 + (i * 60.0) % 240.0,
+          y: 60.0 + (i * 75.0) % 290.0,
           vx: speedX,
           vy: speedY,
           isFacingRight: isRight,
@@ -271,37 +440,46 @@ class _FishingPlayPageState extends State<FishingPlayPage>
     _fishes = fishes;
   }
 
-  /// Loop Update Pergerakan Fisika Ikan Laut & Gelembung Udara (Realistis & Ringan)
+  /// Loop Update Pergerakan Fisika Ikan & Gelembung Udara Akuarium (Realistis & Halus)
   void _updateFishMovement() {
     if (_isGameOver || _isGameWon || _isLoading) return;
 
-    // 1. Update Partikel Gelembung Udara Realistis (Naik ke Atas)
+    // 1. Update Partikel Gelembung Udara Akuarium (Naik ke Atas)
     for (final bubble in _bubbles) {
       bubble.y -= bubble.speed;
       bubble.wobble += bubble.wobbleSpeed;
       if (bubble.y < -25.0) {
-        bubble.y = _seaSize.height + 15.0;
-        bubble.x = _rng.nextDouble() * max(100.0, _seaSize.width);
-        bubble.speed = 0.9 + _rng.nextDouble() * 1.5;
+        bubble.y = _seaSize.height + 15.0 + _rng.nextDouble() * 30.0;
+        if (bubble.isAerator) {
+          if (bubble.isLeftColumn) {
+            bubble.x = 25.0 + _rng.nextDouble() * 35.0;
+          } else {
+            bubble.x = max(80.0, _seaSize.width - 60.0) + _rng.nextDouble() * 35.0;
+          }
+        } else {
+          bubble.x = _rng.nextDouble() * max(100.0, _seaSize.width);
+        }
+        bubble.speed = (bubble.isAerator ? 1.3 : 0.8) + _rng.nextDouble() * 1.4;
       }
     }
 
-    // 2. Update Pergerakan Ikan Laut (Menembus Layar & Menantang)
+    // 2. Update Pergerakan Ikan Akuarium (Menembus Layar & Menantang)
     final minY = 18.0;
-    final maxY = max(80.0, _seaSize.height - 75.0);
 
     for (final fish in _fishes) {
       if (fish.isCaught) continue;
 
+      final maxY = max(80.0, _seaSize.height - fish.height - 40.0);
+
       if (_isFeedingActive) {
         // Mode Kasih Makan: Semua ikan tertarik ke titik makanan di tengah
-        final dx = _foodPosition.dx - (fish.x + 35);
-        final dy = _foodPosition.dy - (fish.y + 20);
+        final dx = _foodPosition.dx - (fish.x + (fish.width * 0.5));
+        final dy = _foodPosition.dy - (fish.y + (fish.height * 0.5));
         final dist = sqrt(dx * dx + dy * dy);
 
         if (dist > 35) {
-          fish.vx = (dx / dist) * 2.4;
-          fish.vy = (dy / dist) * 2.4;
+          fish.vx = (dx / dist) * 2.5;
+          fish.vy = (dy / dist) * 2.5;
         } else {
           // Mengelilingi makanan
           fish.vx = -dy / dist * 1.6;
@@ -317,21 +495,21 @@ class _FishingPlayPageState extends State<FishingPlayPage>
 
         // --- SISTEM MENEMBUS LAYAR (Screen Wrap-Around) ---
         // Jika berenang ke kanan dan menembus keluar layar kanan
-        if (fish.vx > 0 && fish.x > _seaSize.width + 70.0) {
-          fish.x = -85.0;
+        if (fish.vx > 0 && fish.x > _seaSize.width + 40.0) {
+          fish.x = -fish.width - 30.0;
           fish.y = minY + _rng.nextDouble() * (maxY - minY);
-          fish.vx = 0.8 + _rng.nextDouble() * 0.9;
+          fish.vx = 0.7 + _rng.nextDouble() * 0.8;
           fish.isFacingRight = true;
         }
         // Jika berenang ke kiri dan menembus keluar layar kiri
-        else if (fish.vx < 0 && fish.x < -85.0) {
-          fish.x = _seaSize.width + 70.0;
+        else if (fish.vx < 0 && fish.x < -fish.width - 40.0) {
+          fish.x = _seaSize.width + 30.0;
           fish.y = minY + _rng.nextDouble() * (maxY - minY);
-          fish.vx = -(0.8 + _rng.nextDouble() * 0.9);
+          fish.vx = -(0.7 + _rng.nextDouble() * 0.8);
           fish.isFacingRight = false;
         }
 
-        // Batas Kedalaman Permukaan Air & Dasar Karang
+        // Batas Kedalaman Permukaan Air & Dasar Akuarium
         if (fish.y <= minY) {
           fish.vy = fish.vy.abs();
         } else if (fish.y >= maxY) {
@@ -494,6 +672,7 @@ class _FishingPlayPageState extends State<FishingPlayPage>
   /// Menangani Kemenangan (Semua Ikan Tertangkap)
   Future<void> _handleGameWin() async {
     _swimLoopController.stop();
+    _gameTimer?.cancel();
     setState(() {
       _isGameWon = true;
     });
@@ -644,6 +823,7 @@ class _FishingPlayPageState extends State<FishingPlayPage>
   /// Menangani Kekalahan (Nyawa Habis)
   void _handleGameOver() {
     _swimLoopController.stop();
+    _gameTimer?.cancel();
     setState(() {
       _isGameOver = true;
     });
@@ -724,6 +904,90 @@ class _FishingPlayPageState extends State<FishingPlayPage>
     );
   }
 
+  /// Menangani Waktu Habis (1 Menit Countdown Selesai)
+  void _handleTimeOut() {
+    _swimLoopController.stop();
+    _gameTimer?.cancel();
+    setState(() {
+      _isGameOver = true;
+    });
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          backgroundColor: Colors.white,
+          elevation: 16,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFCD34D), width: 2),
+                  ),
+                  child: const Center(
+                    child: Text('⏰', style: TextStyle(fontSize: 34)),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Waktu Telah Habis!',
+                  style: GoogleFonts.poppins(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Waktu 1 menit telah habis sebelum semua ikan tertangkap. Ayo coba lagi dan tangkap lebih cepat!',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF64748B),
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                CustomButton(
+                  text: 'Coba Lagi',
+                  icon: Icons.replay_rounded,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _restartGame();
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    'Kembali ke Beranda',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   /// Mengulang Permainan
   void _restartGame() {
     setState(() {
@@ -740,6 +1004,7 @@ class _FishingPlayPageState extends State<FishingPlayPage>
       }
     });
     _swimLoopController.repeat();
+    _startGameTimer();
   }
 
   @override
@@ -752,7 +1017,7 @@ class _FishingPlayPageState extends State<FishingPlayPage>
       body: SafeArea(
         child: Column(
           children: [
-            // 1. Header (Kembali, Status Tangkapan, Nyawa, Skor, Tombol Bantuan)
+            // 1. Header (Kembali, Tangkapan, Timer Countdown 1 Menit, Nyawa, Bantuan)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               child: Row(
@@ -781,29 +1046,78 @@ class _FishingPlayPageState extends State<FishingPlayPage>
 
                   const SizedBox(width: 8),
 
-                  // Badge Mode & Indikator Tangkapan Ikan (Anti Overflow)
+                  // Indikator Tangkapan Ikan (Anti Overflow)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('🐠', style: TextStyle(fontSize: 13)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$caughtCount/$totalCount',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF0284C7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  // Timer Countdown 1 Menit (01:00 -> 00:00)
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.95),
-                        borderRadius: BorderRadius.circular(16),
+                        color: _gameTimerSeconds <= 10
+                            ? const Color(0xFFFEE2E2)
+                            : Colors.white.withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(14),
+                        border: _gameTimerSeconds <= 10
+                            ? Border.all(color: const Color(0xFFEF4444), width: 1.5)
+                            : null,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('🐠', style: TextStyle(fontSize: 14)),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(
-                              '$caughtCount/$totalCount Ikan Tertangkap',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF0284C7),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          Icon(
+                            Icons.timer_outlined,
+                            size: 15,
+                            color: _gameTimerSeconds <= 10
+                                ? const Color(0xFFEF4444)
+                                : const Color(0xFF0284C7),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _timerFormatted,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: _gameTimerSeconds <= 10
+                                  ? const Color(0xFFEF4444)
+                                  : const Color(0xFF0F172A),
                             ),
                           ),
                         ],
@@ -815,10 +1129,17 @@ class _FishingPlayPageState extends State<FishingPlayPage>
 
                   // Nyawa Pemain (❤️❤️❤️)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -843,14 +1164,21 @@ class _FishingPlayPageState extends State<FishingPlayPage>
                   GestureDetector(
                     onTap: () => showFishingHowToPlay(context),
                     child: Container(
-                      width: 34,
-                      height: 34,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(11),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: const Icon(Icons.help_outline_rounded,
-                          color: Color(0xFF0284C7), size: 17),
+                          color: Color(0xFF0284C7), size: 18),
                     ),
                   ),
                 ],
@@ -865,45 +1193,102 @@ class _FishingPlayPageState extends State<FishingPlayPage>
 
                   return Stack(
                     children: [
-                      // Latar Belakang Gradasi Samudra
-                      Container(
-                        width: double.infinity,
-                        height: double.infinity,
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(0xFF0284C7), // Air laut toska cerah atas
-                              Color(0xFF0369A1),
-                              Color(0xFF075985),
-                              Color(0xFF0C4A6E), // Kedalaman laut samudra bawah
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
+                      // 1. Gambar Background Akuarium Asli (assets/images/ikan/akuarium.jpeg)
+                      Positioned.fill(
+                        child: Image.asset(
+                          'assets/images/ikan/akuarium.jpeg',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(0xFF0284C7),
+                                    Color(0xFF0369A1),
+                                    Color(0xFF0C4A6E),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
 
-                      // Sinar Matahari Tembus Air (Caustics Light Effect)
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: 90,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white.withValues(alpha: 0.25),
-                                Colors.transparent,
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
+                      // 2. Efek Kedalaman Air & Pencahayaan Akuarium (Caustics & Underwater Tone)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.cyan.withValues(alpha: 0.08),
+                                  Colors.blue.withValues(alpha: 0.04),
+                                  Colors.black.withValues(alpha: 0.16),
+                                ],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
                             ),
                           ),
                         ),
                       ),
 
-                      // Partikel Gelembung Udara Realistis Naik ke Permukaan Laut
+                      // 3. Efek Pantulan Kaca Depan Akuarium (Glass Reflection Specular)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 110,
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.white.withValues(alpha: 0.28),
+                                  Colors.white.withValues(alpha: 0.06),
+                                  Colors.transparent,
+                                ],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // 4. Efek Batu Aerator Gelembung Udara di Pojok Kiri & Kanan Bawah
+                      Positioned(
+                        bottom: 6,
+                        left: 28,
+                        child: IgnorePointer(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.cyanAccent.withValues(alpha: 0.22),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Text('🫧', style: TextStyle(fontSize: 14)),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 6,
+                        right: 28,
+                        child: IgnorePointer(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.cyanAccent.withValues(alpha: 0.22),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Text('🫧', style: TextStyle(fontSize: 14)),
+                          ),
+                        ),
+                      ),
+
+                      // 5. Partikel Gelembung Udara Akuarium Realistis (Aerator & Ambient)
                       for (final bubble in _bubbles)
                         Positioned(
                           left: bubble.x + sin(bubble.wobble) * 6.0,
@@ -916,19 +1301,19 @@ class _FishingPlayPageState extends State<FishingPlayPage>
                                 shape: BoxShape.circle,
                                 gradient: RadialGradient(
                                   colors: [
-                                    Colors.white.withValues(alpha: 0.55),
+                                    Colors.white.withValues(alpha: bubble.opacity),
                                     Colors.white.withValues(alpha: 0.15),
-                                    Colors.cyanAccent.withValues(alpha: 0.3),
+                                    Colors.cyanAccent.withValues(alpha: 0.35),
                                   ],
                                   center: const Alignment(-0.35, -0.35),
                                 ),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.65),
+                                  color: Colors.white.withValues(alpha: 0.75),
                                   width: 1.0,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.cyanAccent.withValues(alpha: 0.2),
+                                    color: Colors.cyanAccent.withValues(alpha: 0.25),
                                     blurRadius: 4,
                                   ),
                                 ],
@@ -948,25 +1333,7 @@ class _FishingPlayPageState extends State<FishingPlayPage>
                           ),
                         ),
 
-                      // Hiasan Terumbu Karang & Rumput Laut di Dasar
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text('🪸🌿', style: TextStyle(fontSize: 34, color: Colors.white.withValues(alpha: 0.85))),
-                            Text('🫧', style: TextStyle(fontSize: 20, color: Colors.white.withValues(alpha: 0.5))),
-                            Text('🪸', style: TextStyle(fontSize: 28, color: Colors.white.withValues(alpha: 0.85))),
-                            Text('🫧', style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.5))),
-                            Text('🌿🪸', style: TextStyle(fontSize: 34, color: Colors.white.withValues(alpha: 0.85))),
-                          ],
-                        ),
-                      ),
-
-                      // Animasi Makanan Ikan di Tengah Laut saat tombol "Beri Makan" aktif
+                      // 6. Animasi Makanan Ikan di Tengah Akuarium saat tombol "Beri Makan" aktif
                       if (_isFeedingActive)
                         Positioned(
                           left: _foodPosition.dx - 45,
@@ -976,7 +1343,7 @@ class _FishingPlayPageState extends State<FishingPlayPage>
                           ),
                         ),
 
-                      // Ikan-Ikan Laut yang Sedang Berenang Bebas & Realistis (Clickable Fish)
+                      // 7. Ikan-Ikan Akuarium yang Sedang Berenang Bebas & Berdimensi 3D (Clickable)
                       if (!_isLoading)
                         for (final fish in _fishes)
                           if (!fish.isCaught)
@@ -985,6 +1352,9 @@ class _FishingPlayPageState extends State<FishingPlayPage>
                               top: fish.y,
                               child: OceanSwimmerFishWidget(
                                 species: fish.species,
+                                assetPath: fish.assetPath,
+                                width: fish.width,
+                                height: fish.height,
                                 isFacingRight: fish.isFacingRight,
                                 isCaught: fish.isCaught,
                                 onTap: () => _onFishTapped(fish),
@@ -1169,12 +1539,21 @@ class _FishQuizModalState extends State<_FishQuizModal> {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(7),
+                      width: 44,
+                      height: 44,
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE0F2FE),
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
                       ),
-                      child: const Text('🐠', style: TextStyle(fontSize: 20)),
+                      child: Image.asset(
+                        widget.fish.assetPath,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Text('🐠', style: TextStyle(fontSize: 20)),
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(

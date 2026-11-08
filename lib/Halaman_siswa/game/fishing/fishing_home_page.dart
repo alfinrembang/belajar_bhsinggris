@@ -88,12 +88,14 @@ class _FishingHomePageState extends State<FishingHomePage>
     final displayList = _fishLevels.isNotEmpty
         ? _fishLevels
         : [
-            {'fish_name': 'Golden Carp', 'fish_indo': 'Ikan Mas Koki', 'fish_emoji': '🐟', 'is_completed': false},
-            {'fish_name': 'Clownfish', 'fish_indo': 'Ikan Badut', 'fish_emoji': '🐠', 'is_completed': false},
-            {'fish_name': 'Blue Marlin', 'fish_indo': 'Ikan Todak Biru', 'fish_emoji': '🐟', 'is_completed': false},
-            {'fish_name': 'Electric Eel', 'fish_indo': 'Belut Listrik', 'fish_emoji': '⚡', 'is_completed': false},
-            {'fish_name': 'Giant Salmon', 'fish_indo': 'Salmon Raksasa', 'fish_emoji': '👑', 'is_completed': false},
-            {'fish_name': 'Rainbow Trout', 'fish_indo': 'Ikan Pelangi', 'fish_emoji': '🌈', 'is_completed': false},
+            {'fish_name': 'Clownfish', 'fish_indo': 'Ikan Badut Kotak', 'fish_asset': 'assets/images/ikan/Ikan Badut Kotak yang Menggemaskan.png', 'is_completed': true},
+            {'fish_name': 'Bluefin Tuna', 'fish_indo': 'Ikan Tuna Chibi', 'fish_asset': 'assets/images/ikan/Tuna Chibi Biru Kuning yang Ceria.png', 'is_completed': false},
+            {'fish_name': 'Pufferfish', 'fish_indo': 'Ikan Buntal Kuning', 'fish_asset': 'assets/images/ikan/Pufferfish Chibi Kuning Menggemaskan.png', 'is_completed': false},
+            {'fish_name': 'Seahorse', 'fish_indo': 'Kuda Laut Kawaii', 'fish_asset': 'assets/images/ikan/Kuda Laut Kawaii Kuning Ceria.png', 'is_completed': false},
+            {'fish_name': 'Flowerhorn', 'fish_indo': 'Ikan Louhan Mutiara', 'fish_asset': 'assets/images/ikan/Louhan Kawaii dengan Kok Mutiara.png', 'is_completed': false},
+            {'fish_name': 'Frilled Shark', 'fish_indo': 'Hiu Frill Chibi', 'fish_asset': 'assets/images/ikan/Hiu Frill Chibi Menggemaskan.png', 'is_completed': false},
+            {'fish_name': 'Anglerfish', 'fish_indo': 'Ikan Pemancing Berpijar', 'fish_asset': 'assets/images/ikan/Ikan Pemancing Chibi Berpijar.png', 'is_completed': false},
+            {'fish_name': 'Blue Squid', 'fish_indo': 'Sotong Biru Ceria', 'fish_asset': 'assets/images/ikan/Sotong Biru Chibi Ceria.png', 'is_completed': false},
           ];
 
     showModalBottomSheet(
@@ -191,7 +193,7 @@ class _FishingHomePageState extends State<FishingHomePage>
                       item['fish_name']?.toString() ?? 'Ikan',
                       item['fish_indo']?.toString() ?? '',
                       'Common',
-                      item['fish_emoji']?.toString() ?? '🐟',
+                      item['fish_asset']?.toString(),
                       isUnlocked,
                     );
                   },
@@ -204,9 +206,9 @@ class _FishingHomePageState extends State<FishingHomePage>
     );
   }
 
-  Widget _buildFishCard(String name, String indo, String rarity, String emoji, bool unlocked) {
+  Widget _buildFishCard(String name, String indo, String rarity, String? assetPath, bool unlocked) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: unlocked ? const Color(0xFFF0F9FF) : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(20),
@@ -219,34 +221,49 @@ class _FishingHomePageState extends State<FishingHomePage>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 58,
-            height: 58,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
               color: unlocked ? Colors.white : const Color(0xFFE2E8F0),
               shape: BoxShape.circle,
+              boxShadow: unlocked
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
             ),
+            padding: const EdgeInsets.all(6),
             child: Center(
-              child: Text(
-                unlocked ? emoji : '🔒',
-                style: const TextStyle(fontSize: 28),
-              ),
+              child: unlocked
+                  ? (assetPath != null && assetPath.isNotEmpty
+                      ? Image.asset(assetPath, fit: BoxFit.contain)
+                      : const Text('🐠', style: TextStyle(fontSize: 28)))
+                  : const Text('🔒', style: TextStyle(fontSize: 24)),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             unlocked ? name : '???',
             style: GoogleFonts.poppins(
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: FontWeight.w800,
               color: unlocked ? const Color(0xFF0369A1) : const Color(0xFF94A3B8),
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           Text(
             unlocked ? indo : 'Belum Ditangkap',
             style: GoogleFonts.poppins(
-              fontSize: 11,
+              fontSize: 10.5,
               color: unlocked ? const Color(0xFF64748B) : const Color(0xFFCBD5E1),
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

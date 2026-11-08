@@ -159,4 +159,37 @@ class FishingService {
       };
     }
   }
+
+  /// 4. Ambil Top Skor Leaderboard Game Siswa (GET /api/game/leaderboard)
+  static Future<Map<String, dynamic>> getGameLeaderboard() async {
+    try {
+      final response = await ApiClient.sendRequest((baseUrl) {
+        return http.get(
+          Uri.parse('$baseUrl/game/leaderboard'),
+          headers: {'Accept': 'application/json'},
+        );
+      });
+
+      final Map<String, dynamic> body = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && body['status'] == 'success') {
+        return {
+          'success': true,
+          'data': body['data'] ?? [],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': body['message'] ?? 'Gagal memuat leaderboard.',
+          'data': [],
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal koneksi ke server leaderboard: $e',
+        'data': [],
+      };
+    }
+  }
 }

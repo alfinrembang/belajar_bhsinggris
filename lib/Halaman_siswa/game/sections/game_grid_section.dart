@@ -13,6 +13,7 @@ class GameItemData {
   final Color badgeColor;
   final String badgeText;
   final IconData? customIcon;
+  final String? imageAsset;
 
   const GameItemData({
     required this.id,
@@ -23,6 +24,7 @@ class GameItemData {
     required this.badgeColor,
     this.badgeText = 'Tt Kata',
     this.customIcon,
+    this.imageAsset,
   });
 }
 
@@ -99,23 +101,31 @@ class GameGridSection extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Squircle Icon "T" Menggunakan Komponen Reusable MateriThumbnail
+                  // Squircle Icon Menggunakan Komponen Reusable MateriThumbnail
                   MateriThumbnail(
                     category: item.category,
                     size: 44,
                     borderRadius: BorderRadius.circular(14),
                     customBgColor: item.themeColor,
-                    child: item.customIcon != null
-                        ? Icon(item.customIcon, color: Colors.white, size: 24)
-                        : Text(
-                            'T',
-                            style: GoogleFonts.poppins(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              height: 1.1,
+                    child: item.imageAsset != null
+                        ? Padding(
+                            padding: const EdgeInsets.all(5.0),
+                            child: Image.asset(
+                              item.imageAsset!,
+                              fit: BoxFit.contain,
                             ),
-                          ),
+                          )
+                        : (item.customIcon != null
+                            ? Icon(item.customIcon, color: Colors.white, size: 24)
+                            : Text(
+                                'T',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  height: 1.1,
+                                ),
+                              )),
                   ),
 
                   // Pill Badge Menggunakan MateriBadge Reusable (Aman dari overflow di layar kecil)

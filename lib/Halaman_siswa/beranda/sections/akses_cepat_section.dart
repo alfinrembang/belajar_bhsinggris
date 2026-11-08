@@ -1,13 +1,14 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Section Akses Cepat: Menampilkan Grid 2x2 Menu Cepat (Materi, Latihan, Listening, Games)
-/// dengan ikon berwarna cerah dan segar (bukan hitam) sesuai permintaan pengguna.
+/// Section Akses Cepat: Menampilkan Menu Cepat (Materi, Latihan, Listening, Games, dan Pencapaian)
+/// dengan ikon berwarna cerah dan segar sesuai permintaan pengguna.
 class AksesCepatSection extends StatelessWidget {
   final VoidCallback? onMateriTap;
   final VoidCallback? onLatihanTap;
   final VoidCallback? onListeningTap;
   final VoidCallback? onGamesTap;
+  final VoidCallback? onPencapaianTap;
 
   const AksesCepatSection({
     super.key,
@@ -15,6 +16,7 @@ class AksesCepatSection extends StatelessWidget {
     this.onLatihanTap,
     this.onListeningTap,
     this.onGamesTap,
+    this.onPencapaianTap,
   });
 
   @override
@@ -85,6 +87,24 @@ class AksesCepatSection extends StatelessWidget {
                 iconColor: const Color(0xFF059669), // Emerald Mint Segar
                 iconBgColor: const Color(0xFFD1FAE5),
                 onTap: onGamesTap,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 10),
+
+        // Baris 3: Menu Pencapaian / Prestasi Siswa
+        Row(
+          children: [
+            Expanded(
+              child: _buildAksesCard(
+                judul: 'Pencapaian',
+                subjudul: 'Lihat koleksi piala, medali & lencana prestasimu',
+                icon: Icons.emoji_events_rounded,
+                iconColor: const Color(0xFFD97706), // Emas / Amber Juara
+                iconBgColor: const Color(0xFFFEF3C7),
+                onTap: onPencapaianTap,
               ),
             ),
           ],

@@ -30,7 +30,7 @@ class ProfilSiswaPage extends StatefulWidget {
 
 class _ProfilSiswaPageState extends State<ProfilSiswaPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  int _selectedNavIndex = 5; // Tab Profil aktif (Index 4)
+  int _selectedNavIndex = 4; // Tab Profil aktif (Index 4)
   late SiswaModel? _currentSiswa;
 
   @override
@@ -74,15 +74,6 @@ class _ProfilSiswaPageState extends State<ProfilSiswaPage> {
         context,
         PageRouteBuilder(
           pageBuilder: (c, a, s) => GameSiswaPage(siswa: widget.siswa),
-          transitionDuration: const Duration(milliseconds: 350),
-          transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
-        ),
-      );
-    } else if (index == 4) {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (c, a, s) => PencapaianSiswaPage(siswa: widget.siswa),
           transitionDuration: const Duration(milliseconds: 350),
           transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
         ),

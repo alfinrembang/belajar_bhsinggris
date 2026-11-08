@@ -681,9 +681,12 @@ class _FishingRodPainter extends CustomPainter {
   }
 }
 
-/// Widget Ikan Laut Asli Berenang Bebas & Realistis (Tanpa Badge Kata, Ekor Berkibas Alami)
+/// Widget Ikan Akuarium Berenang Hidup & Dinamis (Asset PNG Realistis, Bayangan Kedalaman Air, Squash-Stretch, Gelembung Bernapas)
 class OceanSwimmerFishWidget extends StatefulWidget {
-  final String species; // clownfish, bluetang, yellowtang, angelfish, ruby
+  final String species;
+  final String? assetPath;
+  final double width;
+  final double height;
   final bool isFacingRight;
   final bool isCaught;
   final VoidCallback onTap;
@@ -691,6 +694,9 @@ class OceanSwimmerFishWidget extends StatefulWidget {
   const OceanSwimmerFishWidget({
     super.key,
     required this.species,
+    this.assetPath,
+    this.width = 86.0,
+    this.height = 60.0,
     required this.isFacingRight,
     this.isCaught = false,
     required this.onTap,
@@ -701,22 +707,43 @@ class OceanSwimmerFishWidget extends StatefulWidget {
 }
 
 class _OceanSwimmerFishWidgetState extends State<OceanSwimmerFishWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _tailController;
+    with TickerProviderStateMixin {
+  late AnimationController _swimController;
+  late AnimationController _bubbleController;
+  late AnimationController _tapFeedbackController;
 
   @override
   void initState() {
     super.initState();
-    _tailController = AnimationController(
+    _swimController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
+
+    _bubbleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    )..repeat();
+
+    _tapFeedbackController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+    );
   }
 
   @override
   void dispose() {
-    _tailController.dispose();
+    _swimController.dispose();
+    _bubbleController.dispose();
+    _tapFeedbackController.dispose();
     super.dispose();
+  }
+
+  void _handleTap() {
+    _tapFeedbackController.forward().then((_) {
+      if (mounted) _tapFeedbackController.reverse();
+    });
+    widget.onTap();
   }
 
   @override
@@ -724,19 +751,172 @@ class _OceanSwimmerFishWidgetState extends State<OceanSwimmerFishWidget>
     if (widget.isCaught) return const SizedBox.shrink();
 
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: _handleTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedBuilder(
-        animation: _tailController,
+        animation: Listenable.merge([
+          _swimController,
+          _bubbleController,
+          _tapFeedbackController,
+        ]),
         builder: (context, child) {
-          final tailWag = sin(_tailController.value * pi) * 0.24;
-          return Transform.flip(
-            flipX: !widget.isFacingRight,
-            child: _buildFishBody(tailWag),
+          final swimVal = _swimController.value;
+          final tapVal = _tapFeedbackController.value;
+
+          // A. Ayunan kemiringan tubuh ikan (Pitch / Tilt)
+          final tilt = sin(swimVal * pi) * 0.08 * (widget.isFacingRight ? 1 : -1);
+
+          // B. Efek otot & pernapasan ikan (Squash & Stretch agar TIDAK FLAT)
+          final scaleX = 1.0 + (sin(swimVal * pi) * 0.04) + (tapVal * 0.12);
+          final scaleY = 1.0 - (sin(swimVal * pi) * 0.03) + (tapVal * 0.12);
+
+          // C. Efek mengapung vertikal alami (Micro-bobbing di dalam air)
+          final bobY = sin(swimVal * pi) * 3.5;
+
+          // D. Gelembung nafas yang keluar dari mulut ikan
+          final bubbleProg = _bubbleController.value;
+          final bubbleY = -bubbleProg * 36.0;
+          final bubbleX = (widget.isFacingRight ? widget.width * 0.40 : -widget.width * 0.40) +
+              (sin(bubbleProg * 2 * pi) * 5.0);
+          final bubbleOpacity = (1.0 - bubbleProg).clamp(0.0, 1.0) * 0.85;
+
+          return SizedBox(
+            width: widget.width + 24,
+            height: widget.height + 24,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                // 1. Partikel Gelembung Kecil dari Mulut Ikan
+                if (bubbleProg > 0.08 && bubbleOpacity > 0.1)
+                  Positioned(
+                    left: ((widget.width + 24) / 2) + bubbleX,
+                    top: ((widget.height + 24) * 0.38) + bubbleY,
+                    child: Opacity(
+                      opacity: bubbleOpacity,
+                      child: Container(
+                        width: 6.5 + (bubbleProg * 5.0),
+                        height: 6.5 + (bubbleProg * 5.0),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.7),
+                          border: Border.all(
+                            color: Colors.cyanAccent.withValues(alpha: 0.85),
+                            width: 1.0,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.cyanAccent.withValues(alpha: 0.35),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Align(
+                          alignment: const Alignment(-0.3, -0.3),
+                          child: Container(
+                            width: 2.2,
+                            height: 2.2,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // 2. Transformasi Renang Ikan Utama (Ayunan, Bernapas, dan Melayang)
+                Transform.translate(
+                  offset: Offset(0, bobY),
+                  child: Transform.rotate(
+                    angle: tilt,
+                    child: Transform.scale(
+                      scaleX: scaleX,
+                      scaleY: scaleY,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // 2A. Bayangan Air (Underwater Depth Shadow) agar ikan berdimensi & tidak flat
+                          Transform.translate(
+                            offset: const Offset(3.5, 6.5),
+                            child: Opacity(
+                              opacity: 0.26,
+                              child: Transform.flip(
+                                flipX: widget.isFacingRight,
+                                child: ColorFiltered(
+                                  colorFilter: const ColorFilter.mode(
+                                    Color(0xFF023E8A),
+                                    BlendMode.srcIn,
+                                  ),
+                                  child: _buildFishImage(),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // 2B. Gambar Ikan Asli dengan Orientasi Arah Hadap
+                          Transform.flip(
+                            flipX: widget.isFacingRight,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                _buildFishImage(),
+
+                                // 2C. Efek Kilau Air Transparan (Underwater Caustic Shimmer)
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              Colors.white.withValues(alpha: 0.16 * (1.0 - swimVal)),
+                                              Colors.transparent,
+                                              Colors.cyanAccent.withValues(alpha: 0.10 * swimVal),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
     );
+  }
+
+  Widget _buildFishImage() {
+    if (widget.assetPath != null && widget.assetPath!.isNotEmpty) {
+      return Image.asset(
+        widget.assetPath!,
+        width: widget.width,
+        height: widget.height,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildFallbackBody();
+        },
+      );
+    }
+    return _buildFallbackBody();
+  }
+
+  Widget _buildFallbackBody() {
+    return _buildFishBody(0.0);
   }
 
   Widget _buildFishBody(double tailWag) {

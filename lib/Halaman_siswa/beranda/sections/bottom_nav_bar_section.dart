@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Section Bottom Navigation Bar: Menampilkan 6 Menu Navigasi Siswa
-/// (Beranda, Materi, Quiz, Game, Pencapaian, Profil).
+/// Section Bottom Navigation Bar: Menampilkan 5 Menu Navigasi Siswa
+/// (Beranda, Materi, Quiz, Game, Profil). Menu Pencapaian dipindahkan ke Akses Cepat.
 class BottomNavBarSection extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int>? onTap;
@@ -60,12 +60,6 @@ class BottomNavBarSection extends StatelessWidget {
               ),
               _buildNavItem(
                 index: 4,
-                label: 'Pencapaian',
-                icon: Icons.emoji_events_outlined,
-                selectedIcon: Icons.emoji_events_rounded,
-              ),
-              _buildNavItem(
-                index: 5,
                 label: 'Profil',
                 icon: Icons.account_circle_outlined,
                 selectedIcon: Icons.account_circle_rounded,

@@ -47,30 +47,12 @@ class _GameSiswaPageState extends State<GameSiswaPage> {
     GameItemData(
       id: 'word_fishing',
       title: 'Tangkap Ikan',
-      description: 'Tangkap ikan impian sambil asah kosakata!',
+      description: 'Tangkap ikan lucu sambil belajar kosakata!',
       category: 'vocabulary',
-      themeColor: Color(0xFF0EA5E9), // Biru Laut Cerah
-      badgeColor: Color(0xFF7DD3FC),
-      badgeText: '🐠 Tangkap Ikan',
-      customIcon: Icons.set_meal_rounded,
-    ),
-    GameItemData(
-      id: 'g3',
-      title: 'Rangkai Kata',
-      description: 'Permainan Merangkai Kata, Rangkai Kata dengan Benar',
-      category: 'grammar',
-      themeColor: Color(0xFF22C55E), // Hijau Zamrud
-      badgeColor: Color(0xFF4ADE80),
-      badgeText: 'Tt Kata',
-    ),
-    GameItemData(
-      id: 'g4',
-      title: 'Rangkai Kata',
-      description: 'Permainan Merangkai Kata, Rangkai Kata dengan Benar',
-      category: 'listening',
-      themeColor: Color(0xFFEF4444), // Coral Red
-      badgeColor: Color(0xFFF87171),
-      badgeText: 'Tt Kata',
+      themeColor: Color(0xFF0284C7), // Biru Samudra Cerah
+      badgeColor: Color(0xFF38BDF8),
+      badgeText: '🐠 Edukasi',
+      imageAsset: 'assets/images/ikan/Ikan Badut Kotak yang Menggemaskan.png',
     ),
   ];
 
@@ -117,17 +99,7 @@ class _GameSiswaPageState extends State<GameSiswaPage> {
         ),
       );
     } else if (index == 4) {
-      // Ke Halaman Pencapaian
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (c, a, s) => PencapaianSiswaPage(siswa: widget.siswa),
-          transitionDuration: const Duration(milliseconds: 350),
-          transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
-        ),
-      );
-    } else if (index == 5) {
-      // Ke Halaman Profil
+      // Ke Halaman Profil (Tab ke-5 pada 5 menu navigasi)
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
@@ -184,8 +156,8 @@ class _GameSiswaPageState extends State<GameSiswaPage> {
 
                 const SizedBox(height: 36),
 
-                // 2. Podium Leaderboard Top 3 Skor Siswa
-                const GameLeaderboardSection(),
+                // 2. Podium Leaderboard Top 3 Skor Siswa Dinamis
+                GameLeaderboardSection(siswa: widget.siswa),
 
                 const SizedBox(height: 24),
 

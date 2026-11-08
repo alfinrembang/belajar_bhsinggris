@@ -239,6 +239,9 @@ class ApiService {
         coinsEarned: coinsEarned,
       );
 
+  static Future<Map<String, dynamic>> getGameLeaderboard() =>
+      FishingService.getGameLeaderboard();
+
   // ----------------------------------------------------
   // Profil & Kenaikan Kelas Siswa
   // ----------------------------------------------------

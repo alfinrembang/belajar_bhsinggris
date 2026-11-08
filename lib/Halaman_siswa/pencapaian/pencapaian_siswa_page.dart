@@ -40,10 +40,8 @@ class _PencapaianSiswaPageState extends State<PencapaianSiswaPage> {
       ),
       backgroundColor: const Color(0xFFF7FAFE),
       bottomNavigationBar: BottomNavBarSection(
-        currentIndex: 4, // Tab Pencapaian Aktif (Index 4)
+        currentIndex: -1, // Halaman Pencapaian diakses melalui Akses Cepat / Sidebar
         onTap: (index) {
-          if (index == 4) return; // Sudah di halaman pencapaian
-
           if (index == 0) {
             Navigator.pushReplacement(
               context,
@@ -84,8 +82,8 @@ class _PencapaianSiswaPageState extends State<PencapaianSiswaPage> {
                     FadeTransition(opacity: a, child: child),
               ),
             );
-          } else if (index == 5) {
-            // Ke Halaman Profil (Index 5)
+          } else if (index == 4) {
+            // Ke Halaman Profil (Tab ke-5 pada 5 menu navigasi)
             Navigator.pushReplacement(
               context,
               PageRouteBuilder(

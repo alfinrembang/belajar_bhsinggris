@@ -151,18 +151,7 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
               ),
             );
           } else if (index == 4) {
-            Navigator.pushReplacement(
-              context,
-              PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) =>
-                    PencapaianSiswaPage(siswa: widget.siswa),
-                transitionDuration: const Duration(milliseconds: 350),
-                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-              ),
-            );
-          } else if (index == 5) {
+            // Ke Halaman Profil (Tab ke-5 pada 5 menu navigasi)
             Navigator.pushReplacement(
               context,
               PageRouteBuilder(
@@ -313,6 +302,19 @@ class _BerandaSiswaPageState extends State<BerandaSiswaPage> {
                         pageBuilder: (context, animation, secondaryAnimation) =>
                             GameSiswaPage(siswa: widget.siswa),
                         transitionDuration: const Duration(milliseconds: 400),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                      ),
+                    );
+                  },
+                  onPencapaianTap: () {
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            PencapaianSiswaPage(siswa: widget.siswa),
+                        transitionDuration: const Duration(milliseconds: 350),
                         transitionsBuilder: (context, animation, secondaryAnimation, child) {
                           return FadeTransition(opacity: animation, child: child);
                         },
