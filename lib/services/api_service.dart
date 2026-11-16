@@ -6,7 +6,6 @@ export 'api/auth_service.dart';
 export 'api/materi_service.dart';
 export 'api/listening_service.dart';
 export 'api/quiz_service.dart';
-export 'api/puzzle_service.dart';
 export 'api/fishing_service.dart';
 export 'api/siswa_service.dart';
 
@@ -15,7 +14,6 @@ import 'api/auth_service.dart';
 import 'api/materi_service.dart';
 import 'api/listening_service.dart';
 import 'api/quiz_service.dart';
-import 'api/puzzle_service.dart';
 import 'api/fishing_service.dart';
 import 'api/siswa_service.dart';
 
@@ -167,32 +165,6 @@ class ApiService {
         siswaId: siswaId,
         jawaban: jawaban,
         waktuPengerjaanDetik: waktuPengerjaanDetik,
-      );
-
-  // ----------------------------------------------------
-  // Mini Game Puzzle
-  // ----------------------------------------------------
-  static Future<Map<String, dynamic>> getPuzzleProgres({
-    int? siswaId,
-    String difficulty = 'mudah',
-  }) =>
-      PuzzleService.getPuzzleProgres(siswaId: siswaId, difficulty: difficulty);
-
-  static Future<Map<String, dynamic>> submitPuzzleSelesai({
-    int? siswaId,
-    required String difficulty,
-    required int level,
-    required int stars,
-    required String timeSpent,
-    required int coinsEarned,
-  }) =>
-      PuzzleService.submitPuzzleSelesai(
-        siswaId: siswaId,
-        difficulty: difficulty,
-        level: level,
-        stars: stars,
-        timeSpent: timeSpent,
-        coinsEarned: coinsEarned,
       );
 
   // ----------------------------------------------------

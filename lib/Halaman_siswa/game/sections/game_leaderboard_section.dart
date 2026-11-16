@@ -13,7 +13,6 @@ class LeaderboardPlayer {
   final String noAbsen;
   final int totalScore;
   final int fishingScore;
-  final int puzzleScore;
   final int koin;
   final String status;
   final Color avatarColor;
@@ -26,7 +25,6 @@ class LeaderboardPlayer {
     required this.noAbsen,
     required this.totalScore,
     required this.fishingScore,
-    required this.puzzleScore,
     required this.koin,
     required this.status,
     required this.avatarColor,
@@ -53,9 +51,6 @@ class LeaderboardPlayer {
       fishingScore: (json['skor_memancing'] ?? 0) is num
           ? (json['skor_memancing'] as num).toInt()
           : (int.tryParse(json['skor_memancing']?.toString() ?? '') ?? 0),
-      puzzleScore: (json['puzzle_selesai'] ?? 0) is num
-          ? (json['puzzle_selesai'] as num).toInt()
-          : (int.tryParse(json['puzzle_selesai']?.toString() ?? '') ?? 0),
       koin: (json['koin'] ?? 120) is num
           ? (json['koin'] as num).toInt()
           : (int.tryParse(json['koin']?.toString() ?? '') ?? 120),
@@ -105,9 +100,8 @@ class _GameLeaderboardSectionState extends State<GameLeaderboardSection> {
       noAbsen: '14',
       totalScore: 2450,
       fishingScore: 1250,
-      puzzleScore: 8,
       koin: 240,
-      status: 'Ocean Master & Puzzle Solver 👑',
+      status: 'Master Tangkap Ikan 👑',
       avatarColor: Color(0xFF0284C7),
     ),
     LeaderboardPlayer(
@@ -118,7 +112,6 @@ class _GameLeaderboardSectionState extends State<GameLeaderboardSection> {
       noAbsen: '28',
       totalScore: 2100,
       fishingScore: 1050,
-      puzzleScore: 7,
       koin: 210,
       status: 'Vocab Hunter Tangguh 🐠',
       avatarColor: Color(0xFF7C3AED),
@@ -131,7 +124,6 @@ class _GameLeaderboardSectionState extends State<GameLeaderboardSection> {
       noAbsen: '05',
       totalScore: 1890,
       fishingScore: 950,
-      puzzleScore: 6,
       koin: 180,
       status: 'Penjelajah Samudra 🌊',
       avatarColor: Color(0xFF059669),
@@ -742,37 +734,6 @@ class _GameLeaderboardSectionState extends State<GameLeaderboardSection> {
                         ),
                         Text(
                           '${player.fishingScore} Poin',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF0F172A),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Puzzle Master
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Text('🧩', style: TextStyle(fontSize: 15)),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Puzzle Master',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF64748B),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          '${player.puzzleScore} Level Selesai',
                           style: GoogleFonts.poppins(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,

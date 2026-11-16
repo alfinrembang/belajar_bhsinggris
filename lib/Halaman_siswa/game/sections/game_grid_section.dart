@@ -57,6 +57,13 @@ class GameGridSection extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        if (items.length == 1) {
+          return SizedBox(
+            width: constraints.maxWidth,
+            child: _buildFeaturedGameCard(context, items.first),
+          );
+        }
+
         const spacing = 12.0;
         final cardWidth = (constraints.maxWidth - spacing) / 2;
 
@@ -71,6 +78,108 @@ class GameGridSection extends StatelessWidget {
           }).toList(),
         );
       },
+    );
+  }
+
+  Widget _buildFeaturedGameCard(BuildContext context, GameItemData item) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFFF1F5F9),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              MateriThumbnail(
+                category: item.category,
+                size: 54,
+                borderRadius: BorderRadius.circular(16),
+                customBgColor: item.themeColor,
+                child: item.imageAsset != null
+                    ? Padding(
+                        padding: const EdgeInsets.all(6.0),
+                        child: Image.asset(
+                          item.imageAsset!,
+                          fit: BoxFit.contain,
+                        ),
+                      )
+                    : Icon(item.customIcon ?? Icons.sports_esports_rounded, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                        ),
+                        MateriBadge(
+                          category: item.category,
+                          customText: item.badgeText,
+                          customBgColor: item.badgeColor,
+                          customTextColor: Colors.white,
+                          fontSize: 10,
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF64748B),
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          CustomButton(
+            text: 'Mainkan Sekarang',
+            icon: Icons.play_arrow_rounded,
+            iconSize: 20,
+            height: 42,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => _handleCardTap(context, item),
+          ),
+        ],
+      ),
     );
   }
 

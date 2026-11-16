@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../models/siswa_model.dart';
 import '../../../../services/api_service.dart';
 import '../../../../widgets/custom_button.dart';
-import '../puzzle/game_coin_manager.dart';
+import '../game_coin_manager.dart';
 import 'fishing_how_to_play_dialog.dart';
 import 'fishing_visuals.dart';
 

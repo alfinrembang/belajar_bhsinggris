@@ -12,8 +12,8 @@ import 'sections/game_filter_section.dart';
 import 'sections/game_grid_section.dart';
 import 'sections/game_header_section.dart';
 import 'sections/game_leaderboard_section.dart';
-import 'puzzle/puzzle_home_page.dart';
 import 'fishing/fishing_home_page.dart';
+import 'werewolf/werewolf_lobby_page.dart';
 
 /// Halaman Utama Game Edukasi Siswa.
 /// Disusun secara modular menggunakan sub-sections terpisah,
@@ -35,14 +35,14 @@ class _GameSiswaPageState extends State<GameSiswaPage> {
 
   final List<GameItemData> _allGames = const [
     GameItemData(
-      id: 'puzzle_master',
-      title: 'Puzzle Master',
-      description: 'Susun potongan, temukan keindahan!',
+      id: 'tebak_serigala',
+      title: 'Tebak Serigala',
+      description: '4 Domba vs 1 Serigala! Tebak serigala lewat ciri-ciri bahasa Inggris.',
       category: 'vocabulary',
-      themeColor: Color(0xFFF59E0B), // Kuning Amber
-      badgeColor: Color(0xFFFCD34D),
-      badgeText: '🧩 Puzzle',
-      customIcon: Icons.extension_rounded,
+      themeColor: Color(0xFF6366F1), // Indigo Malam Misteri
+      badgeColor: Color(0xFF818CF8),
+      badgeText: '🐺 Wolf vs Sheep',
+      customIcon: Icons.pets_rounded,
     ),
     GameItemData(
       id: 'word_fishing',
@@ -173,15 +173,15 @@ class _GameSiswaPageState extends State<GameSiswaPage> {
 
                 const SizedBox(height: 16),
 
-                // 4. Grid Game Cards 2 Kolom
+                // 4. Grid Game Cards
                 GameGridSection(
                   items: _filteredGames,
                   onPlayGame: (game) {
-                    if (game.id == 'puzzle_master') {
+                    if (game.id == 'tebak_serigala') {
                       Navigator.push(
                         context,
                         PageRouteBuilder(
-                          pageBuilder: (c, a, s) => PuzzleHomePage(siswa: widget.siswa),
+                          pageBuilder: (c, a, s) => WerewolfLobbyPage(siswa: widget.siswa),
                           transitionDuration: const Duration(milliseconds: 350),
                           transitionsBuilder: (c, a, s, child) => FadeTransition(opacity: a, child: child),
                         ),
