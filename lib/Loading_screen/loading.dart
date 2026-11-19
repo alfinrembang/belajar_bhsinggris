@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../Auth/regis_siswa.dart';
+import '../Auth/login_siswa.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -16,7 +16,7 @@ class _LoadingScreenState extends State<LoadingScreen>
   late AnimationController _dotsController;
   Timer? _navigationTimer;
   bool _isImagesPrecached = false;
-  bool _showRegis = false;
+  bool _showLogin = false;
   bool _isOverlayRemoved = false;
 
   // Animasi berurutan untuk elemen loading screen
@@ -106,7 +106,7 @@ class _LoadingScreenState extends State<LoadingScreen>
       if (mounted) {
         _dotsController.stop();
         setState(() {
-          _showRegis = true;
+          _showLogin = true;
         });
       }
     });
@@ -137,24 +137,24 @@ class _LoadingScreenState extends State<LoadingScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Form Registrasi Siswa (Pre-warmed di memori GPU, meluncur naik perlahan & sangat halus)
+          // 1. Form Login Siswa (Pre-warmed di memori GPU, meluncur naik perlahan & sangat halus)
           AnimatedSlide(
-            offset: _showRegis ? Offset.zero : const Offset(0, 0.025),
+            offset: _showLogin ? Offset.zero : const Offset(0, 0.025),
             duration: const Duration(milliseconds: 750),
             curve: Curves.easeOutCubic,
-            child: const RegisSiswaPage(),
+            child: const LoginSiswaPage(),
           ),
 
           // 2. Loading Screen Overlay (Melapisi di atasnya lalu cross-fade keluar tanpa frame drop)
           if (!_isOverlayRemoved)
             IgnorePointer(
-              ignoring: _showRegis,
+              ignoring: _showLogin,
               child: AnimatedOpacity(
-                opacity: _showRegis ? 0.0 : 1.0,
+                opacity: _showLogin ? 0.0 : 1.0,
                 duration: const Duration(milliseconds: 750),
                 curve: Curves.easeInOutCubic,
                 onEnd: () {
-                  if (mounted && _showRegis) {
+                  if (mounted && _showLogin) {
                     setState(() {
                       _isOverlayRemoved = true;
                     });

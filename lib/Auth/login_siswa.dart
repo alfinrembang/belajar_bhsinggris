@@ -7,7 +7,6 @@ import '../widgets/auth_background.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import 'lupasandi_siswa.dart';
-import 'regis_siswa.dart';
 
 class LoginSiswaPage extends StatefulWidget {
   final String? initialEmail;
@@ -25,7 +24,6 @@ class LoginSiswaPage extends StatefulWidget {
 
 class _LoginSiswaPageState extends State<LoginSiswaPage> {
   // Controller form input
-  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _nisnController = TextEditingController();
   final TextEditingController _sandiController = TextEditingController();
 
@@ -36,10 +34,6 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
   @override
   void initState() {
     super.initState();
-    // Otomatis isi jika dialihkan setelah registrasi berhasil
-    if (widget.initialEmail != null && widget.initialEmail!.isNotEmpty) {
-      _emailController.text = widget.initialEmail!;
-    }
     if (widget.initialNisn != null && widget.initialNisn!.isNotEmpty) {
       _nisnController.text = widget.initialNisn!;
     }
@@ -47,7 +41,6 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
 
   @override
   void dispose() {
-    _emailController.dispose();
     _nisnController.dispose();
     _sandiController.dispose();
     super.dispose();
@@ -82,12 +75,11 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
   }
 
   Future<void> _handleMasuk() async {
-    final email = _emailController.text.trim();
     final nisn = _nisnController.text.trim();
     final sandi = _sandiController.text.trim();
 
-    if (email.isEmpty && nisn.isEmpty) {
-      _showNotification('Masukkan Email atau NISN kamu!', isError: true);
+    if (nisn.isEmpty) {
+      _showNotification('Masukkan NISN kamu!', isError: true);
       return;
     }
 
@@ -101,8 +93,7 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
     });
 
     final result = await ApiService.loginSiswa(
-      email: email.isNotEmpty ? email : null,
-      nisn: nisn.isNotEmpty ? nisn : null,
+      nisn: nisn,
       sandi: sandi,
     );
 
@@ -274,35 +265,24 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
                               ),
                             ),
 
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 14),
 
-                            // 1. Komponen Input: Email
+                            // 1. Komponen Input: NISN
                             CustomTextField(
-                              label: 'Email',
-                              controller: _emailController,
-                              hintText: 'admin@gmail.com',
-                              prefixIcon: Icons.mail_outline_rounded,
-                              keyboardType: TextInputType.emailAddress,
-                            ),
-
-                            const SizedBox(height: 7),
-
-                            // 2. Komponen Input: Nisn
-                            CustomTextField(
-                              label: 'Nisn',
+                              label: 'NISN',
                               controller: _nisnController,
-                              hintText: '0087654321',
+                              hintText: 'Masukkan NISN kamu',
                               prefixIcon: Icons.school_outlined,
                               keyboardType: TextInputType.number,
                             ),
 
-                            const SizedBox(height: 7),
+                            const SizedBox(height: 10),
 
-                            // 3. Komponen Input: Sandi
+                            // 2. Komponen Input: Kata Sandi
                             CustomTextField(
-                              label: 'Sandi',
+                              label: 'Kata Sandi',
                               controller: _sandiController,
-                              hintText: '123456',
+                              hintText: 'Masukkan kata sandi',
                               prefixIcon: Icons.lock_outline_rounded,
                               obscureText: _obscurePassword,
                               suffixIcon: IconButton(
@@ -372,7 +352,7 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
                               ),
                             ),
 
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 12),
 
                             // Komponen Tombol: Masuk
                             CustomButton(
@@ -382,62 +362,19 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
                               onTap: _handleMasuk,
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 18),
 
-                            // Link ke Halaman Registrasi
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Belum punya akun? ',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: const Color(0xFF6B7280),
-                                  ),
+                            // Informasi Bantuan Akun Siswa
+                            Center(
+                              child: Text(
+                                'Akun siswa didaftarkan oleh sekolah / guru.\nHubungi gurumu jika mengalami kendala masuk.',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  color: const Color(0xFF64748B),
+                                  height: 1.45,
                                 ),
-                                GestureDetector(
-                                  onTap: () {
-                                    if (Navigator.canPop(context)) {
-                                      Navigator.pop(context);
-                                    } else {
-                                      Navigator.push(
-                                        context,
-                                        PageRouteBuilder(
-                                          pageBuilder: (context, animation, secondaryAnimation) =>
-                                              const RegisSiswaPage(),
-                                          transitionDuration: const Duration(milliseconds: 650),
-                                          reverseTransitionDuration: const Duration(milliseconds: 550),
-                                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                            final curvedAnimation = CurvedAnimation(
-                                              parent: animation,
-                                              curve: Curves.easeInOutCubic,
-                                              reverseCurve: Curves.easeInOutCubic,
-                                            );
-                                            return FadeTransition(
-                                              opacity: curvedAnimation,
-                                              child: SlideTransition(
-                                                position: Tween<Offset>(
-                                                  begin: const Offset(0.0, 0.035),
-                                                  end: Offset.zero,
-                                                ).animate(curvedAnimation),
-                                                child: child,
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  child: Text(
-                                    'Daftar',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF0066D6),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ],
                         ),
