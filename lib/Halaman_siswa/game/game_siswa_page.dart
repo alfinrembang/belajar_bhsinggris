@@ -7,7 +7,6 @@ import '../beranda/sections/bottom_nav_bar_section.dart';
 import '../materi/materi_siswa_page.dart';
 import '../quiz/quiz_siswa_page.dart';
 import '../profil/profil_siswa_page.dart';
-import '../pencapaian/pencapaian_siswa_page.dart';
 import 'sections/game_filter_section.dart';
 import 'sections/game_grid_section.dart';
 import 'sections/game_header_section.dart';
@@ -37,18 +36,18 @@ class _GameSiswaPageState extends State<GameSiswaPage> {
     GameItemData(
       id: 'tebak_serigala',
       title: 'Tebak Serigala',
-      description: '4 Domba vs 1 Serigala! Tebak serigala lewat ciri-ciri bahasa Inggris.',
-      category: 'vocabulary',
+      description: '9 Domba vs 1 Serigala! Tebak siapa serigala lewat ciri-ciri bahasa Inggris.',
+      category: 'tebak-tebakan',
       themeColor: Color(0xFF6366F1), // Indigo Malam Misteri
       badgeColor: Color(0xFF818CF8),
-      badgeText: '🐺 Wolf vs Sheep',
+      badgeText: '🎯 Tebak-Tebakan',
       customIcon: Icons.pets_rounded,
     ),
     GameItemData(
       id: 'word_fishing',
       title: 'Tangkap Ikan',
       description: 'Tangkap ikan lucu sambil belajar kosakata!',
-      category: 'vocabulary',
+      category: 'edukasi',
       themeColor: Color(0xFF0284C7), // Biru Samudra Cerah
       badgeColor: Color(0xFF38BDF8),
       badgeText: '🐠 Edukasi',

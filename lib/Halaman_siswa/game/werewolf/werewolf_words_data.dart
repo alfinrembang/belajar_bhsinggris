@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../../services/api/api_client.dart';
 import 'werewolf_models.dart';
 
 /// Bank Data Pasangan Kosakata Bahasa Inggris untuk Game Tebak Serigala (Wolf vs Sheep)
@@ -350,9 +353,58 @@ class WerewolfWordsData {
     ),
   ];
 
+  static List<WerewolfWordPair> _apiPairs = [];
+
+  /// Menyinkronkan daftar pasangan kata kartu dari Backend Laravel yang dikelola guru
+  static Future<void> syncFromApi() async {
+    try {
+      final response = await ApiClient.sendRequest((baseUrl) {
+        return http.get(Uri.parse('$baseUrl/werewolf/words'));
+      });
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        if (body['status'] == 'success' && body['data'] is List) {
+          final List list = body['data'];
+          final parsed = <WerewolfWordPair>[];
+
+          for (final item in list) {
+            final dombaClues = (item['domba_clues'] is List)
+                ? List<String>.from(item['domba_clues'])
+                : <String>[];
+            final serigalaClues = (item['serigala_clues'] is List)
+                ? List<String>.from(item['serigala_clues'])
+                : <String>[];
+
+            parsed.add(
+              WerewolfWordPair(
+                id: 'api_${item['id']}',
+                theme: item['theme'] as String? ?? 'Umum',
+                dombaWord: (item['domba_word'] as String? ?? '').toUpperCase(),
+                dombaMeaning: item['domba_meaning'] as String? ?? '',
+                serigalaWord: (item['serigala_word'] as String? ?? '').toUpperCase(),
+                serigalaMeaning: item['serigala_meaning'] as String? ?? '',
+                botDombaClues: dombaClues.isNotEmpty ? dombaClues : ['Related to this topic.'],
+                botSerigalaClues: serigalaClues.isNotEmpty ? serigalaClues : ['Related to this topic.'],
+                explanation: item['english_difference'] as String? ?? '',
+              ),
+            );
+          }
+
+          if (parsed.isNotEmpty) {
+            _apiPairs = parsed;
+          }
+        }
+      }
+    } catch (_) {
+      // Fallback ke data lokal jika server offline
+    }
+  }
+
   /// Mengambil 1 pasangan kata acak untuk sesi permainan baru
   static WerewolfWordPair getRandomPair() {
-    final list = List<WerewolfWordPair>.from(pairs)..shuffle();
+    final pool = _apiPairs.isNotEmpty ? _apiPairs : pairs;
+    final list = List<WerewolfWordPair>.from(pool)..shuffle();
     return list.first;
   }
 }

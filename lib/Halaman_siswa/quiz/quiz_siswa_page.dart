@@ -9,7 +9,6 @@ import '../beranda/sections/bottom_nav_bar_section.dart';
 import '../materi/materi_siswa_page.dart';
 import '../game/game_siswa_page.dart';
 import '../profil/profil_siswa_page.dart';
-import '../pencapaian/pencapaian_siswa_page.dart';
 import 'sections/quiz_header_section.dart';
 import 'sections/quiz_join_room_section.dart';
 import 'sections/quiz_list_section.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Section Judul "Game" & Filter Chips Kategori Game (Semua, Text, Grammar, Vocabulary, Listening).
+/// Section Judul "Game" & Filter Chips Kategori Game (Semua, Edukasi, Tebak-Tebakan, Grammar, Listening).
 class GameFilterSection extends StatelessWidget {
   final String selectedCategory;
   final ValueChanged<String> onCategoryChanged;
@@ -14,9 +14,9 @@ class GameFilterSection extends StatelessWidget {
 
   static const List<String> categories = [
     'Semua',
-    'Text',
+    'Edukasi',
+    'Tebak-Tebakan',
     'Grammar',
-    'Vocabulary',
     'Listening',
   ];
 

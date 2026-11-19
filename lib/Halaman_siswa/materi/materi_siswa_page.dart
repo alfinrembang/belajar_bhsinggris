@@ -8,7 +8,6 @@ import '../beranda/beranda_siswa_page.dart';
 import '../quiz/quiz_siswa_page.dart';
 import '../game/game_siswa_page.dart';
 import '../profil/profil_siswa_page.dart';
-import '../pencapaian/pencapaian_siswa_page.dart';
 import '../beranda/sections/bottom_nav_bar_section.dart';
 import 'sections/materi_filter_section.dart';
 import 'sections/materi_header_section.dart';

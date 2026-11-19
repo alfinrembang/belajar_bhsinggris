@@ -116,7 +116,7 @@ class WerewolfLobbyPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '5 Pemain, 1 Serigala menyamar! Berikan ciri-ciri dalam Bahasa Inggris dan temukan siapa serigalanya.',
+                      '10 Pemain, 1 Serigala menyamar! Berikan ciri-ciri dalam Bahasa Inggris dan temukan siapa serigalanya.',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
                         fontSize: 12,
@@ -146,8 +146,8 @@ class WerewolfLobbyPage extends StatelessWidget {
                 badge: '⚡ MAIN INSTAN',
                 badgeColor: const Color(0xFF10B981),
                 iconEmoji: '🤖',
-                title: 'Lawan Bot AI (4 Teman Kelas)',
-                description: 'Bermain langsung bersama Budi, Siti, Rizki, dan Citra. Cocok untuk mengasah kosakata kapan saja!',
+                title: 'Lawan Bot AI (9 Teman Kelas)',
+                description: 'Bermain langsung bersama Budi, Siti, Rizki, Citra, Doni, Maya, Rian, Nabila, dan Farhan. Cocok untuk mengasah kosakata kapan saja!',
                 buttonText: 'Main Sekarang',
                 buttonColor: const Color(0xFF6366F1),
                 onTap: () {
@@ -165,7 +165,7 @@ class WerewolfLobbyPage extends StatelessWidget {
               // Mode 2: Room Multiplayer (Mabar)
               _buildModeCard(
                 context: context,
-                badge: '👥 MABAR 5 ORANG',
+                badge: '👥 MABAR 10 ORANG',
                 badgeColor: const Color(0xFF38BDF8),
                 iconEmoji: '🔑',
                 title: 'Room Multiplayer (Mabar)',
@@ -210,7 +210,7 @@ class WerewolfLobbyPage extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    _buildRuleRow('1', '4 Domba mendapat Kata A, 1 Serigala mendapat Kata B (Peran diacak!).'),
+                    _buildRuleRow('1', '9 Domba mendapat Kata A, 1 Serigala mendapat Kata B (Peran diacak!).'),
                     _buildRuleRow('2', 'Tulis 1 ciri-ciri kata di kartumu dalam Bahasa Inggris.'),
                     _buildRuleRow('3', 'Semua pemain membaca petunjuk dan melakukan voting Serigala.'),
                     _buildRuleRow('4', 'Domba Menang jika Serigala tertangkap dan di-vote keluar!'),

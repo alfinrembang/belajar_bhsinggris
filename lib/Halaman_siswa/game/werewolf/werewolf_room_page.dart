@@ -34,9 +34,9 @@ class _WerewolfRoomPageState extends State<WerewolfRoomPage> {
   void _createRoom() {
     final random = Random();
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final code = 'WOLF' + String.fromCharCodes(Iterable.generate(2, (_) => chars.codeUnitAt(random.nextInt(chars.length))));
+    final code = 'WOLF${String.fromCharCodes(Iterable.generate(2, (_) => chars.codeUnitAt(random.nextInt(chars.length))))}';
 
-    final myName = widget.siswa?.namaLengkap?.split(' ').first ?? 'Host';
+    final myName = widget.siswa?.namaLengkap.split(' ').first ?? 'Host';
 
     setState(() {
       _isHost = true;
@@ -67,7 +67,7 @@ class _WerewolfRoomPageState extends State<WerewolfRoomPage> {
       return;
     }
 
-    final myName = widget.siswa?.namaLengkap?.split(' ').first ?? 'Player';
+    final myName = widget.siswa?.namaLengkap.split(' ').first ?? 'Player';
 
     setState(() {
       _isHost = false;
@@ -82,52 +82,89 @@ class _WerewolfRoomPageState extends State<WerewolfRoomPage> {
     });
   }
 
-  /// Tambahkan Bot AI untuk mengisi slot kosong (maksimal 5 pemain)
+  /// Tambahkan 1 Bot AI untuk mengisi slot kosong (maksimal 10 pemain)
   void _addBotToSlot() {
     if (_lobbyPlayers.length >= 10) return;
 
     final botNames = ['Budi', 'Siti', 'Rizki', 'Citra', 'Doni', 'Maya', 'Rian', 'Nabila', 'Farhan'];
-    final botEmojis = ['🧑‍💻', '👩‍🎓', '😎', '🎨', '🚀', '🌟'];
+    final botEmojis = ['🧑‍💻', '👩‍🎓', '😎', '🎨', '⚽', '🌸', '🎸', '📚', '🚀'];
     final botColors = [
-      const Color(0xFF10B981),
+      const Color(0xFF3B82F6),
+      const Color(0xFFEC4899),
       const Color(0xFFF59E0B),
-      const Color(0xFF8B5CF6),
+      const Color(0xFF10B981),
       const Color(0xFF06B6D4),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEF4444),
+      const Color(0xFF14B8A6),
+      const Color(0xFFF97316),
     ];
 
-    final random = Random();
-    final name = botNames[random.nextInt(botNames.length)];
-    final emoji = botEmojis[random.nextInt(botEmojis.length)];
-    final color = botColors[random.nextInt(botColors.length)];
+    // Cari nama bot yang belum ada di lobby
+    final existingNames = _lobbyPlayers.map((p) => p['name'] as String).toSet();
+    String chosenName = 'Bot Teman';
+    String chosenEmoji = '🤖';
+    Color chosenColor = const Color(0xFF10B981);
+
+    for (int i = 0; i < botNames.length; i++) {
+      final candidate = '${botNames[i]} (Bot)';
+      if (!existingNames.contains(candidate)) {
+        chosenName = candidate;
+        chosenEmoji = botEmojis[i % botEmojis.length];
+        chosenColor = botColors[i % botColors.length];
+        break;
+      }
+    }
 
     setState(() {
       _lobbyPlayers.add({
-        'name': '$name (Bot)',
-        'emoji': emoji,
+        'name': chosenName,
+        'emoji': chosenEmoji,
         'isHost': false,
         'isBot': true,
-        'color': color,
+        'color': chosenColor,
       });
     });
   }
 
-  /// Mulai permainan setelah 5 slot terkumpul
+  /// Otomatis isi semua slot yang tersisa hingga penuh 10 pemain dengan Bot
+  void _fillRemainingSlotsWithBots() {
+    while (_lobbyPlayers.length < 10) {
+      _addBotToSlot();
+    }
+  }
+
+  /// Hapus bot dari slot
+  void _removeBot(int index) {
+    if (index >= 0 && index < _lobbyPlayers.length) {
+      if (_lobbyPlayers[index]['isBot'] == true) {
+        setState(() {
+          _lobbyPlayers.removeAt(index);
+        });
+      }
+    }
+  }
+
+  /// Mulai permainan setelah minimal 5 slot terkumpul (hingga 10 pemain)
   void _startGame() {
     if (_lobbyPlayers.length < 5) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Minimal 5 pemain untuk memulai (Maksimal 10)! Tambahkan Bot atau ajak temanmu.'),
-          backgroundColor: const Color(0xFFF59E0B),
+          backgroundColor: Color(0xFFF59E0B),
         ),
       );
       return;
     }
 
-    // Masuk ke gameplay
+    // Masuk ke gameplay dengan susunan pemain dari Room Mabar
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => WerewolfAiPlayPage(siswa: widget.siswa),
+        builder: (context) => WerewolfAiPlayPage(
+          siswa: widget.siswa,
+          customLobbyPlayers: _lobbyPlayers,
+        ),
       ),
     );
   }
@@ -453,12 +490,12 @@ class _WerewolfRoomPageState extends State<WerewolfRoomPage> {
 
           const SizedBox(height: 24),
 
-          // Header Slot Pemain (X / 5)
+          // Header Slot Pemain (X / 10)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Pemain Terkumpul (${_lobbyPlayers.length}/10)',
+                'Pemain (${_lobbyPlayers.length}/10)',
                 style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
@@ -466,17 +503,42 @@ class _WerewolfRoomPageState extends State<WerewolfRoomPage> {
                 ),
               ),
               if (_isHost && _lobbyPlayers.length < 10)
-                TextButton.icon(
-                  onPressed: _addBotToSlot,
-                  icon: const Icon(Icons.add_rounded, size: 16, color: Color(0xFF38BDF8)),
-                  label: Text(
-                    '+ Tambah Bot AI',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF38BDF8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton.icon(
+                      onPressed: _addBotToSlot,
+                      icon: const Icon(Icons.add_rounded, size: 15, color: Color(0xFF38BDF8)),
+                      label: Text(
+                        '+ Bot',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF38BDF8),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 4),
+                    ElevatedButton.icon(
+                      onPressed: _fillRemainingSlotsWithBots,
+                      icon: const Icon(Icons.flash_on_rounded, size: 14),
+                      label: Text(
+                        'Penuhi Slot',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        minimumSize: Size.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -535,7 +597,16 @@ class _WerewolfRoomPageState extends State<WerewolfRoomPage> {
                           ],
                         ),
                       ),
-                      const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20),
+                      if (player['isBot'] == true && _isHost)
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                          onPressed: () => _removeBot(index),
+                          tooltip: 'Hapus Bot',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        )
+                      else
+                        const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20),
                     ],
                   ),
                 );

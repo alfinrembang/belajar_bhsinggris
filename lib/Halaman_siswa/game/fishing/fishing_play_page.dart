@@ -1550,7 +1550,7 @@ class _FishQuizModalState extends State<_FishQuizModal> {
                       child: Image.asset(
                         widget.fish.assetPath,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Center(
+                        errorBuilder: (_, _, _) => const Center(
                           child: Text('🐠', style: TextStyle(fontSize: 20)),
                         ),
                       ),

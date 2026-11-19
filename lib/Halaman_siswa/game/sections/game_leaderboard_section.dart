@@ -131,7 +131,6 @@ class _GameLeaderboardSectionState extends State<GameLeaderboardSection> {
   ];
 
   List<LeaderboardPlayer> _players = List.from(_defaultPlayers);
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -155,7 +154,6 @@ class _GameLeaderboardSectionState extends State<GameLeaderboardSection> {
 
         setState(() {
           _players = list;
-          _isLoading = false;
         });
       }
     } catch (_) {

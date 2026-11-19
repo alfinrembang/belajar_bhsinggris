@@ -14,8 +14,13 @@ import 'werewolf_words_data.dart';
 /// dan siklus eliminasi bertahap hingga Serigala tertangkap atau mencapai 1 vs 1.
 class WerewolfAiPlayPage extends StatefulWidget {
   final SiswaModel? siswa;
+  final List<Map<String, dynamic>>? customLobbyPlayers;
 
-  const WerewolfAiPlayPage({super.key, this.siswa});
+  const WerewolfAiPlayPage({
+    super.key,
+    this.siswa,
+    this.customLobbyPlayers,
+  });
 
   @override
   State<WerewolfAiPlayPage> createState() => _WerewolfAiPlayPageState();
@@ -65,6 +70,7 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
   @override
   void initState() {
     super.initState();
+    WerewolfWordsData.syncFromApi();
     _startNewGameSession();
   }
 
@@ -104,57 +110,92 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
     _wolfActionSecondsRemaining = 15;
     _clueInputController.clear();
 
-    // Buat 10 pemain (1 Siswa + 9 Bot Teman Kelas)
-    final humanName = widget.siswa?.namaLengkap?.split(' ').first ?? 'Kamu';
-    final botProfiles = [
-      {'name': 'Budi', 'emoji': '🧑‍💻', 'color': const Color(0xFF3B82F6)},
-      {'name': 'Siti', 'emoji': '👩‍🎓', 'color': const Color(0xFFEC4899)},
-      {'name': 'Rizki', 'emoji': '😎', 'color': const Color(0xFFF59E0B)},
-      {'name': 'Citra', 'emoji': '🎨', 'color': const Color(0xFF10B981)},
-      {'name': 'Doni', 'emoji': '⚽', 'color': const Color(0xFF06B6D4)},
-      {'name': 'Maya', 'emoji': '🌸', 'color': const Color(0xFF8B5CF6)},
-      {'name': 'Rian', 'emoji': '🎸', 'color': const Color(0xFFEF4444)},
-      {'name': 'Nabila', 'emoji': '📚', 'color': const Color(0xFF14B8A6)},
-      {'name': 'Farhan', 'emoji': '🚀', 'color': const Color(0xFFF97316)},
-    ];
-
-    // Tentukan siapa yang menjadi Serigala secara acak (indeks 0 sampai 9: 10 Pemain)
     final random = Random();
-    final wolfIndex = random.nextInt(10);
-
     _players = [];
 
-    // Human player (Index 0)
-    final humanRole = (wolfIndex == 0) ? WerewolfRole.serigala : WerewolfRole.domba;
-    _humanPlayer = WerewolfPlayer(
-      id: 'p_human',
-      name: humanName,
-      avatarEmoji: '⭐',
-      avatarColor: const Color(0xFF6366F1),
-      isBot: false,
-      role: humanRole,
-      word: humanRole == WerewolfRole.serigala ? _currentWordPair.serigalaWord : _currentWordPair.dombaWord,
-      meaning: humanRole == WerewolfRole.serigala ? _currentWordPair.serigalaMeaning : _currentWordPair.dombaMeaning,
-    );
-    _players.add(_humanPlayer);
+    if (widget.customLobbyPlayers != null && widget.customLobbyPlayers!.isNotEmpty) {
+      // Skenario Mode Mabar (Room): Menggunakan pemain yang ada di Room
+      final lobby = List<Map<String, dynamic>>.from(widget.customLobbyPlayers!);
+      final totalCount = lobby.length;
+      final wolfIndex = random.nextInt(totalCount);
 
-    // 4 Bot Players (Index 1 sampai 4)
-    for (int i = 0; i < botProfiles.length; i++) {
-      final prof = botProfiles[i];
-      final isWolf = (wolfIndex == (i + 1));
-      final role = isWolf ? WerewolfRole.serigala : WerewolfRole.domba;
-      _players.add(
-        WerewolfPlayer(
-          id: 'p_bot_${i + 1}',
-          name: prof['name'] as String,
-          avatarEmoji: prof['emoji'] as String,
-          avatarColor: prof['color'] as Color,
-          isBot: true,
+      WerewolfPlayer? mainUser;
+
+      for (int i = 0; i < totalCount; i++) {
+        final item = lobby[i];
+        final isWolf = (i == wolfIndex);
+        final role = isWolf ? WerewolfRole.serigala : WerewolfRole.domba;
+        final isBot = item['isBot'] == true;
+        final word = isWolf ? _currentWordPair.serigalaWord : _currentWordPair.dombaWord;
+        final meaning = isWolf ? _currentWordPair.serigalaMeaning : _currentWordPair.dombaMeaning;
+
+        final player = WerewolfPlayer(
+          id: 'p_${i + 1}',
+          name: item['name'] as String? ?? 'Pemain ${i + 1}',
+          avatarEmoji: item['emoji'] as String? ?? '👤',
+          avatarColor: item['color'] as Color? ?? const Color(0xFF6366F1),
+          isBot: isBot,
           role: role,
-          word: role == WerewolfRole.serigala ? _currentWordPair.serigalaWord : _currentWordPair.dombaWord,
-          meaning: role == WerewolfRole.serigala ? _currentWordPair.serigalaMeaning : _currentWordPair.dombaMeaning,
-        ),
+          word: word,
+          meaning: meaning,
+        );
+
+        if (!isBot && mainUser == null) {
+          mainUser = player;
+        }
+        _players.add(player);
+      }
+
+      _humanPlayer = mainUser ?? _players.first;
+    } else {
+      // Skenario Default Single Player (Lawan Bot AI 10 Pemain)
+      final humanName = widget.siswa?.namaLengkap.split(' ').first ?? 'Kamu';
+      final botProfiles = [
+        {'name': 'Budi', 'emoji': '🧑‍💻', 'color': const Color(0xFF3B82F6)},
+        {'name': 'Siti', 'emoji': '👩‍🎓', 'color': const Color(0xFFEC4899)},
+        {'name': 'Rizki', 'emoji': '😎', 'color': const Color(0xFFF59E0B)},
+        {'name': 'Citra', 'emoji': '🎨', 'color': const Color(0xFF10B981)},
+        {'name': 'Doni', 'emoji': '⚽', 'color': const Color(0xFF06B6D4)},
+        {'name': 'Maya', 'emoji': '🌸', 'color': const Color(0xFF8B5CF6)},
+        {'name': 'Rian', 'emoji': '🎸', 'color': const Color(0xFFEF4444)},
+        {'name': 'Nabila', 'emoji': '📚', 'color': const Color(0xFF14B8A6)},
+        {'name': 'Farhan', 'emoji': '🚀', 'color': const Color(0xFFF97316)},
+      ];
+
+      final wolfIndex = random.nextInt(10);
+
+      // Human player (Index 0)
+      final humanRole = (wolfIndex == 0) ? WerewolfRole.serigala : WerewolfRole.domba;
+      _humanPlayer = WerewolfPlayer(
+        id: 'p_human',
+        name: humanName,
+        avatarEmoji: '⭐',
+        avatarColor: const Color(0xFF6366F1),
+        isBot: false,
+        role: humanRole,
+        word: humanRole == WerewolfRole.serigala ? _currentWordPair.serigalaWord : _currentWordPair.dombaWord,
+        meaning: humanRole == WerewolfRole.serigala ? _currentWordPair.serigalaMeaning : _currentWordPair.dombaMeaning,
       );
+      _players.add(_humanPlayer);
+
+      // 9 Bot Players
+      for (int i = 0; i < botProfiles.length; i++) {
+        final prof = botProfiles[i];
+        final isWolf = (wolfIndex == (i + 1));
+        final role = isWolf ? WerewolfRole.serigala : WerewolfRole.domba;
+        _players.add(
+          WerewolfPlayer(
+            id: 'p_bot_${i + 1}',
+            name: prof['name'] as String,
+            avatarEmoji: prof['emoji'] as String,
+            avatarColor: prof['color'] as Color,
+            isBot: true,
+            role: role,
+            word: role == WerewolfRole.serigala ? _currentWordPair.serigalaWord : _currentWordPair.dombaWord,
+            meaning: role == WerewolfRole.serigala ? _currentWordPair.serigalaMeaning : _currentWordPair.dombaMeaning,
+          ),
+        );
+      }
     }
 
     setState(() {});
@@ -683,7 +724,7 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
       _roundVoters[humanTarget.id]?.add(_humanPlayer);
     }
 
-    // 2. Generate vote cerdas untuk masing-masing bot AI yang masih hidup
+    // 2. Generate vote cerdas & natural (AI Lebih Kalem, Tidak Tamat di Ronde 1!)
     final random = Random();
     for (final bot in aliveList) {
       if (!bot.isBot) continue;
@@ -695,18 +736,45 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
       WerewolfPlayer targetToVote;
 
       if (bot.isSerigala) {
-        // Serigala berusaha mem-vote salah satu Domba secara acak
+        // Serigala cerdik: mengkambinghitamkan Domba lain
         final dombaTargets = validTargets.where((p) => p.isDomba).toList();
-        targetToVote = dombaTargets.isNotEmpty
-            ? dombaTargets[random.nextInt(dombaTargets.length)]
-            : validTargets[random.nextInt(validTargets.length)];
-      } else {
-        // Domba bot: 60% peluang curiga pada Serigala, 40% salah tebak
-        final wolfTarget = validTargets.where((p) => p.isSerigala).firstOrNull;
-        if (wolfTarget != null && random.nextDouble() < 0.60) {
-          targetToVote = wolfTarget;
+        if (dombaTargets.isNotEmpty) {
+          // Ikut mendorong vote domba yang mulai dicurigai pemain lain untuk mengalihkan perhatian
+          dombaTargets.sort((a, b) => b.votesReceived.compareTo(a.votesReceived));
+          if (dombaTargets.first.votesReceived > 0 && random.nextBool()) {
+            targetToVote = dombaTargets.first;
+          } else {
+            targetToVote = dombaTargets[random.nextInt(dombaTargets.length)];
+          }
         } else {
           targetToVote = validTargets[random.nextInt(validTargets.length)];
+        }
+      } else {
+        // Domba bot: AI Lebih Kalem & Bertahap
+        // Ronde 1: Peluang curiga serigala hanya 16% (84% mencurigai domba lain, membagi suara)
+        // Ronde 2: Curiga serigala naik ke 30%
+        // Ronde 3: Curiga serigala naik ke 45%
+        // Ronde 4+: Curiga serigala naik ke 58%
+        double wolfSuspicionChance = 0.16;
+        if (_roundNumber == 2) {
+          wolfSuspicionChance = 0.30;
+        } else if (_roundNumber == 3) {
+          wolfSuspicionChance = 0.45;
+        } else if (_roundNumber >= 4) {
+          wolfSuspicionChance = 0.58;
+        }
+
+        final wolfTarget = validTargets.where((p) => p.isSerigala).firstOrNull;
+        if (wolfTarget != null && random.nextDouble() < wolfSuspicionChance) {
+          targetToVote = wolfTarget;
+        } else {
+          // Sebarkan tuduhan ke domba-domba lain secara alami agar terjadi perdebatan seru
+          final otherSheep = validTargets.where((p) => !p.isSerigala).toList();
+          if (otherSheep.isNotEmpty && random.nextDouble() < 0.85) {
+            targetToVote = otherSheep[random.nextInt(otherSheep.length)];
+          } else {
+            targetToVote = validTargets[random.nextInt(validTargets.length)];
+          }
         }
       }
 
@@ -714,9 +782,12 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
       _roundVoters[targetToVote.id]?.add(bot);
     }
 
-    // Cari pemain yang mendapat vote terbanyak di antara yang masih hidup
+    // Cari pemain yang mendapat vote terbanyak (dengan penanganan suara seri/tie)
     aliveList.sort((a, b) => b.votesReceived.compareTo(a.votesReceived));
-    final eliminated = aliveList.first;
+    final maxVotes = aliveList.first.votesReceived;
+    final topCandidates = aliveList.where((p) => p.votesReceived == maxVotes).toList();
+    // Jika ada nilai seri, pilih salah satu di antara kandidat seri secara acak
+    final eliminated = topCandidates[random.nextInt(topCandidates.length)];
     eliminated.isAlive = false;
     _lastEliminatedPlayer = eliminated;
 
@@ -1015,166 +1086,319 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
 
           const SizedBox(height: 24),
 
-          // Kartu Rahasia yang Dapat Dibalik
-          GestureDetector(
-            onTap: () {
-              if (!_isCardRevealed) {
-                setState(() {
-                  _isCardRevealed = true;
-                });
-              }
-              // Mulai timer saat kartu pertama kali diklik
-              _startRevealCountdown();
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              width: double.infinity,
-              height: 340,
-              decoration: BoxDecoration(
-                gradient: _isCardRevealed
-                    ? (_humanPlayer.isSerigala
-                        ? const LinearGradient(
-                            colors: [Color(0xFF7F1D1D), Color(0xFF991B1B), Color(0xFF450A0A)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          )
-                        : const LinearGradient(
-                            colors: [Color(0xFF065F46), Color(0xFF047857), Color(0xFF064E3B)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ))
-                    : const LinearGradient(
-                        colors: [Color(0xFF312E81), Color(0xFF1E1B4B)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+          // Kartu Rahasia yang Dapat Dibalik (dengan Asset Gambar Presisi)
+          Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: GestureDetector(
+                onTap: () {
+                  if (!_isCardRevealed) {
+                    setState(() {
+                      _isCardRevealed = true;
+                    });
+                  }
+                  // Mulai timer saat kartu pertama kali diklik
+                  _startRevealCountdown();
+                },
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 450),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(
+                        scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation),
+                        child: child,
                       ),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: _isCardRevealed
-                      ? (_humanPlayer.isSerigala ? const Color(0xFFF87171) : const Color(0xFF34D399))
-                      : const Color(0xFF6366F1),
-                  width: 2.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: _isCardRevealed
-                        ? (_humanPlayer.isSerigala
-                            ? const Color(0xFFEF4444).withValues(alpha: 0.35)
-                            : const Color(0xFF10B981).withValues(alpha: 0.35))
-                        : const Color(0xFF6366F1).withValues(alpha: 0.3),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: _isCardRevealed
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Badge Role
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(_humanPlayer.roleEmoji, style: const TextStyle(fontSize: 16)),
-                              const SizedBox(width: 6),
-                              Text(
-                                _humanPlayer.roleName.toUpperCase(),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: 1.5,
-                                ),
+                    );
+                  },
+                  child: _isCardRevealed
+                      // === KARTU DEPAN (terbuka) ===
+                      ? AspectRatio(
+                          key: const ValueKey('card_front'),
+                          aspectRatio: 1024 / 1536, // Rasio 2:3 presisi sesuai asset kartu
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: _humanPlayer.isSerigala
+                                    ? const Color(0xFFEF4444)
+                                    : const Color(0xFF10B981),
+                                width: 2,
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (_humanPlayer.isSerigala
+                                          ? const Color(0xFFEF4444)
+                                          : const Color(0xFF10B981))
+                                      .withValues(alpha: 0.38),
+                                  blurRadius: 28,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  // Background: Asset kartu depan (pas rapih sesuai kotak)
+                                  Image.asset(
+                                    'assets/images/kartu depan.png',
+                                    fit: BoxFit.fill,
+                                  ),
+                                  // Overlay warna sangat tipis sesuai role
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: _humanPlayer.isSerigala
+                                            ? [
+                                                const Color(0xFF7F1D1D).withValues(alpha: 0.08),
+                                                const Color(0xFF991B1B).withValues(alpha: 0.03),
+                                              ]
+                                            : [
+                                                const Color(0xFF065F46).withValues(alpha: 0.06),
+                                                const Color(0xFF047857).withValues(alpha: 0.02),
+                                              ],
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                      ),
+                                    ),
+                                  ),
+                                  // Konten kartu tersusun rapi di dalam bingkai perak
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        // 1. Badge Role
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: _humanPlayer.isSerigala
+                                                ? const Color(0xFF991B1B)
+                                                : const Color(0xFF065F46),
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(
+                                              color: _humanPlayer.isSerigala
+                                                  ? const Color(0xFFFCA5A5)
+                                                  : const Color(0xFF6EE7B7),
+                                              width: 1,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.15),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(_humanPlayer.roleEmoji, style: const TextStyle(fontSize: 16)),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                _humanPlayer.roleName.toUpperCase(),
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Colors.white,
+                                                  letterSpacing: 1.5,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
 
-                        // Kata Bahasa Inggris
-                        Text(
-                          _humanPlayer.word,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
+                                        // 2. Kata Bahasa Inggris & Arti (FittedBox agar tidak overflow)
+                                        Column(
+                                          children: [
+                                            FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(
+                                                _humanPlayer.word,
+                                                textAlign: TextAlign.center,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 34,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: const Color(0xFF0F172A),
+                                                  letterSpacing: 2,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              '(${_humanPlayer.meaning})',
+                                              textAlign: TextAlign.center,
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFF475569),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
 
-                        // Arti Kata Bahasa Indonesia
-                        Text(
-                          '(${_humanPlayer.meaning})',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white70,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
+                                        // 3. Tema Kategori
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: _humanPlayer.isSerigala
+                                                ? const Color(0xFFFEE2E2)
+                                                : const Color(0xFFD1FAE5),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: _humanPlayer.isSerigala
+                                                  ? const Color(0xFFFCA5A5)
+                                                  : const Color(0xFF6EE7B7),
+                                              width: 0.8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Kategori: ${_currentWordPair.theme}',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 11,
+                                              color: _humanPlayer.isSerigala
+                                                  ? const Color(0xFF991B1B)
+                                                  : const Color(0xFF065F46),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
 
-                        // Tema Kategori
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
+                                        // 4. Deskripsi Panduan Peran
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(
+                                              color: const Color(0xFFCBD5E1).withValues(alpha: 0.6),
+                                              width: 0.8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            _humanPlayer.isSerigala
+                                                ? 'Kamu adalah Serigala! Berikan ciri-ciri mengecoh agar tidak tertangkap.'
+                                                : 'Kamu adalah Domba! Temukan siapa serigala dari ciri-ciri yang mencurigakan.',
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 10.5,
+                                              color: const Color(0xFF334155),
+                                              height: 1.35,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          child: Text(
-                            'Kategori: ${_currentWordPair.theme}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11.5,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
+                        )
+                      // === KARTU BELAKANG (tertutup) ===
+                      : AspectRatio(
+                          key: const ValueKey('card_back'),
+                          aspectRatio: 1024 / 1536, // Rasio 2:3 presisi sesuai asset kartu
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: const Color(0xFF6366F1).withValues(alpha: 0.6),
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                                  blurRadius: 28,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  // Background: Asset kartu belakang (tampil utuh & pas tanpa terpotong)
+                                  Image.asset(
+                                    'assets/images/kartu belakang.png',
+                                    fit: BoxFit.fill,
+                                  ),
+                                  // Overlay gradien halus di bagian bawah agar tombol ketuk terbaca
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    height: 120,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.transparent,
+                                            Colors.black.withValues(alpha: 0.65),
+                                          ],
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // Tombol Petunjuk Buka Kartu di Bawah (tidak menutupi artwork tengah)
+                                  Positioned(
+                                    left: 20,
+                                    right: 20,
+                                    bottom: 20,
+                                    child: Center(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF0F172A).withValues(alpha: 0.85),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(
+                                            color: const Color(0xFF818CF8).withValues(alpha: 0.7),
+                                            width: 1.2,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              Icons.touch_app_rounded,
+                                              color: Color(0xFFFCD34D),
+                                              size: 17,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Ketuk untuk Membuka Kartu',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.white,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 20),
-
-                        Text(
-                          _humanPlayer.isSerigala
-                              ? 'Kamu adalah Serigala! Berikan ciri-ciri palsu dan menyamarlah agar tidak tertangkap.'
-                              : 'Kamu adalah Domba! Temukan siapa serigala yang memiliki kartu berbeda dari ciri-cirinya.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('🎴', style: TextStyle(fontSize: 54)),
-                        const SizedBox(height: 16),
-                        Text(
-                          'KETUK UNTUK MEMBUKA KARTU',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Rahasiakan kartumu dari pemain lain',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: const Color(0xFF94A3B8),
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+              ),
             ),
           ),
 
@@ -1591,18 +1815,23 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
                     style: const TextStyle(fontSize: 18),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    (!_hasUsedWolfKillInMatch && _humanPlayer.isSerigala)
-                        ? 'Aksi Serigala: Pilih Mangsa 🐺'
-                        : ((!_hasUsedWolfKillInMatch)
-                            ? 'Malam Mencekam: Serigala Beraksi 🌙'
-                            : 'Mulai Sesi Voting Domba vs Serigala (30s) 🗳️'),
-                    style: GoogleFonts.poppins(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w800,
-                      color: (!_hasUsedWolfKillInMatch && _humanPlayer.isSerigala)
-                          ? Colors.white
-                          : const Color(0xFF0F172A),
+                  Expanded(
+                    child: Text(
+                      (!_hasUsedWolfKillInMatch && _humanPlayer.isSerigala)
+                          ? 'Aksi Serigala: Pilih Mangsa 🐺'
+                          : ((!_hasUsedWolfKillInMatch)
+                              ? 'Malam Mencekam: Serigala Beraksi 🌙'
+                              : 'Mulai Sesi Voting Domba vs Serigala (30s) 🗳️'),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: (!_hasUsedWolfKillInMatch && _humanPlayer.isSerigala)
+                            ? Colors.white
+                            : const Color(0xFF0F172A),
+                      ),
                     ),
                   ),
                 ],
@@ -1786,12 +2015,17 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
                     children: [
                       const Text('🗳️', style: TextStyle(fontSize: 18)),
                       const SizedBox(width: 8),
-                      Text(
-                        'Lanjut ke Sesi Voting (30s) ➔',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                      Expanded(
+                        child: Text(
+                          'Lanjut ke Sesi Voting (30s) ➔',
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -1932,12 +2166,17 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
                     children: [
                       const Text('🩸', style: TextStyle(fontSize: 18)),
                       const SizedBox(width: 8),
-                      Text(
-                        _selectedWolfKillTargetId != null ? 'Terkam & Eliminasi Pemain Ini' : 'Pilih 1 Sasaran Domba',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                      Expanded(
+                        child: Text(
+                          _selectedWolfKillTargetId != null ? 'Terkam & Eliminasi Pemain Ini' : 'Pilih 1 Sasaran Domba',
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -2069,12 +2308,17 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
                   children: [
                     const Text('🗳️', style: TextStyle(fontSize: 18)),
                     const SizedBox(width: 8),
-                    Text(
-                      'Mulai Sesi Voting Domba vs Serigala (30s)',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
+                    Expanded(
+                      child: Text(
+                        'Mulai Sesi Voting Domba vs Serigala (30s)',
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
+                        ),
                       ),
                     ),
                   ],
@@ -2320,14 +2564,19 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
                 children: [
                   const Icon(Icons.how_to_vote_rounded, size: 18, color: Colors.white),
                   const SizedBox(width: 8),
-                  Text(
-                    _selectedVoteTargetId != null
-                        ? 'Kunci & Hitung Suara Vote (${_votingSecondsRemaining}s)'
-                        : 'Pilih 1 Pemain untuk Di-Vote (${_votingSecondsRemaining}s)',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                  Expanded(
+                    child: Text(
+                      _selectedVoteTargetId != null
+                          ? 'Kunci & Hitung Suara Vote (${_votingSecondsRemaining}s)'
+                          : 'Pilih 1 Pemain untuk Di-Vote (${_votingSecondsRemaining}s)',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -2658,12 +2907,17 @@ class _WerewolfAiPlayPageState extends State<WerewolfAiPlayPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Lanjut ke Ronde ${_roundNumber + 1} (${_alivePlayers.length} Pemain Tersisa)',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
+                    Expanded(
+                      child: Text(
+                        'Lanjut ke Ronde ${_roundNumber + 1} (${_alivePlayers.length} Pemain Tersisa)',
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
