@@ -1,115 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../models/pencapaian_model.dart';
 
-/// Data statis satu item pencapaian/lencana.
-class PencapaianItem {
-  final String title;
-  final String description;
-  final String info;
-  final String status; // 'Terbuka', 'Terkunci', 'Selesai', 'Langka'
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBgColor;
-
-  const PencapaianItem({
-    required this.title,
-    required this.description,
-    required this.info,
-    required this.status,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBgColor,
-  });
-}
-
-/// Section Daftar Pencapaian / Lencana.
-/// Menampilkan list item pencapaian statis sesuai desain Figma.
+/// Section Daftar Pencapaian / Lencana Siswa.
+/// Menampilkan list item pencapaian dinamis dari backend API.
 class PencapaianListSection extends StatelessWidget {
   final String activeFilter;
-  final ValueChanged<PencapaianItem>? onItemTap;
+  final List<PencapaianItemModel> items;
+  final bool isLoading;
+  final ValueChanged<PencapaianItemModel>? onItemTap;
+  final VoidCallback? onRetry;
 
   const PencapaianListSection({
     super.key,
     this.activeFilter = 'Semua',
+    required this.items,
+    this.isLoading = false,
     this.onItemTap,
+    this.onRetry,
   });
 
-  // Data statis pencapaian (sesuai Figma)
-  static const List<PencapaianItem> _allPencapaian = [
-    PencapaianItem(
-      title: 'Top 10 RPL 1',
-      description: 'Masuk peringkat 10 besar RPL 1 di kelas',
-      info: 'Okt 2024',
-      status: 'Terbuka',
-      icon: Icons.emoji_events_rounded,
-      iconColor: Color(0xFFCA8A04),
-      iconBgColor: Color(0xFFFEF9C3),
-    ),
-    PencapaianItem(
-      title: 'Early Bird',
-      description: 'Belajar sebelum jam 06:00 selama 7 hari',
-      info: '06:00 WIB',
-      status: 'Terbuka',
-      icon: Icons.wb_sunny_rounded,
-      iconColor: Color(0xFFEA580C),
-      iconBgColor: Color(0xFFFFF7ED),
-    ),
-    PencapaianItem(
-      title: 'Streak King',
-      description: 'Belajar 7 hari berturut-turut tanpa absen',
-      info: 'Minggu lalu',
-      status: 'Terbuka',
-      icon: Icons.local_fire_department_rounded,
-      iconColor: Color(0xFFDC2626),
-      iconBgColor: Color(0xFFFEE2E2),
-    ),
-    PencapaianItem(
-      title: 'Bug Hunter',
-      description: 'Melaporkan 10 bug atau masalah di aplikasi',
-      info: '50 Glosarium',
-      status: 'Terbuka',
-      icon: Icons.bug_report_rounded,
-      iconColor: Color(0xFF059669),
-      iconBgColor: Color(0xFFD1FAE5),
-    ),
-    PencapaianItem(
-      title: 'Score 100',
-      description: 'Mendapatkan nilai 100 pada Quiz Modul 3',
-      info: 'Quiz Modul 3',
-      status: 'Selesai',
-      icon: Icons.check_circle_rounded,
-      iconColor: Color(0xFF059669),
-      iconBgColor: Color(0xFFD1FAE5),
-    ),
-    PencapaianItem(
-      title: 'TOEIC 550+',
-      description: 'Mencapai skor TOEIC minimal 550',
-      info: 'Terkunci',
-      status: 'Terkunci',
-      icon: Icons.star_rounded,
-      iconColor: Color(0xFF7C3AED),
-      iconBgColor: Color(0xFFEDE9FE),
-    ),
-  ];
-
-  List<PencapaianItem> get _filteredItems {
-    if (activeFilter == 'Semua') return _allPencapaian;
-    return _allPencapaian.where((item) {
+  List<PencapaianItemModel> get _filteredItems {
+    if (activeFilter == 'Semua') return items;
+    return items.where((item) {
       if (activeFilter == 'Terbuka') {
-        return item.status == 'Terbuka' || item.status == 'Selesai';
+        return item.isUnlocked || item.status == 'Terbuka' || item.status == 'Selesai';
       }
-      return item.status == activeFilter;
+      if (activeFilter == 'Terkunci') {
+        return !item.isUnlocked || item.status == 'Terkunci';
+      }
+      if (activeFilter == 'Langka') {
+        return item.kategori.toLowerCase() == 'langka' || item.status.toLowerCase() == 'langka';
+      }
+      return item.status.toLowerCase() == activeFilter.toLowerCase();
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final items = _filteredItems;
+    if (isLoading) {
+      return _buildLoadingSkeleton();
+    }
+
+    final filtered = _filteredItems;
+
+    if (filtered.isEmpty) {
+      return _buildEmptyState();
+    }
 
     return Column(
       children: [
-        // Daftar Item Pencapaian
-        ...items.map((item) => _buildPencapaianTile(context, item)),
+        // Daftar Item Pencapaian Dinamis
+        ...filtered.map((item) => _buildPencapaianTile(context, item)),
 
         const SizedBox(height: 14),
 
@@ -135,7 +77,7 @@ class PencapaianListSection extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Selesaikan lebih banyak aktivitas untuk membuka lencana-lencana spesial lainnya!',
+                  'Selesaikan lebih banyak aktivitas belajar dan raih poin game untuk membuka seluruh lencana spesial!',
                   style: GoogleFonts.poppins(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
@@ -151,37 +93,30 @@ class PencapaianListSection extends StatelessWidget {
     );
   }
 
-  Widget _buildPencapaianTile(BuildContext context, PencapaianItem item) {
-    // Warna badge berdasarkan status
+  Widget _buildPencapaianTile(BuildContext context, PencapaianItemModel item) {
+    // Penentuan warna badge berdasarkan status & kategori
     Color badgeBgColor;
     Color badgeTextColor;
     String badgeText;
 
-    switch (item.status) {
-      case 'Terbuka':
-        badgeBgColor = const Color(0xFFDBEAFE);
-        badgeTextColor = const Color(0xFF2563EB);
-        badgeText = 'Terbuka';
-        break;
-      case 'Selesai':
+    if (item.kategori.toLowerCase() == 'langka' || item.status.toLowerCase() == 'langka') {
+      badgeBgColor = const Color(0xFFFEF3C7);
+      badgeTextColor = const Color(0xFFD97706);
+      badgeText = item.isUnlocked ? 'Langka ⭐' : 'Langka (Terkunci)';
+    } else if (item.isUnlocked) {
+      if (item.status.toLowerCase() == 'selesai') {
         badgeBgColor = const Color(0xFFD1FAE5);
         badgeTextColor = const Color(0xFF059669);
         badgeText = 'Selesai';
-        break;
-      case 'Terkunci':
-        badgeBgColor = const Color(0xFFF1F5F9);
-        badgeTextColor = const Color(0xFF94A3B8);
-        badgeText = 'Terkunci';
-        break;
-      case 'Langka':
-        badgeBgColor = const Color(0xFFFEF3C7);
-        badgeTextColor = const Color(0xFFD97706);
-        badgeText = 'Langka';
-        break;
-      default:
-        badgeBgColor = const Color(0xFFF1F5F9);
-        badgeTextColor = const Color(0xFF94A3B8);
-        badgeText = item.status;
+      } else {
+        badgeBgColor = const Color(0xFFDBEAFE);
+        badgeTextColor = const Color(0xFF2563EB);
+        badgeText = 'Terbuka';
+      }
+    } else {
+      badgeBgColor = const Color(0xFFF1F5F9);
+      badgeTextColor = const Color(0xFF94A3B8);
+      badgeText = 'Terkunci';
     }
 
     return Padding(
@@ -196,6 +131,12 @@ class PencapaianListSection extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: item.isUnlocked
+                    ? item.iconColor.withValues(alpha: 0.15)
+                    : const Color(0xFFF1F5F9),
+                width: 1.2,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF0E4E93).withValues(alpha: 0.05),
@@ -208,22 +149,20 @@ class PencapaianListSection extends StatelessWidget {
               children: [
                 // Icon Pencapaian
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 46,
+                  height: 46,
                   decoration: BoxDecoration(
-                    color: item.status == 'Terkunci'
-                        ? const Color(0xFFF1F5F9)
-                        : item.iconBgColor,
-                    borderRadius: BorderRadius.circular(12),
+                    color: item.isUnlocked
+                        ? item.iconBgColor
+                        : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(13),
                   ),
                   child: Center(
                     child: Icon(
-                      item.status == 'Terkunci'
-                          ? Icons.lock_outline_rounded
-                          : item.icon,
-                      color: item.status == 'Terkunci'
-                          ? const Color(0xFFCBD5E1)
-                          : item.iconColor,
+                      item.isUnlocked ? item.icon : Icons.lock_outline_rounded,
+                      color: item.isUnlocked
+                          ? item.iconColor
+                          : const Color(0xFF94A3B8),
                       size: 22,
                     ),
                   ),
@@ -236,15 +175,23 @@ class PencapaianListSection extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        item.title,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: item.status == 'Terkunci'
-                              ? const Color(0xFF94A3B8)
-                              : const Color(0xFF1E293B),
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.title,
+                              style: GoogleFonts.poppins(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: item.isUnlocked
+                                    ? const Color(0xFF1E293B)
+                                    : const Color(0xFF64748B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -252,21 +199,52 @@ class PencapaianListSection extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w400,
-                          color: const Color(0xFF94A3B8),
+                          color: const Color(0xFF64748B),
                           height: 1.3,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.info,
-                        style: GoogleFonts.poppins(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFFCBD5E1),
+                      const SizedBox(height: 4),
+
+                      // Tampilan Progress (Bar Progress jika terkunci dan ada progress)
+                      if (!item.isUnlocked && item.progressText.isNotEmpty)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: LinearProgressIndicator(
+                                value: item.progressPercent.clamp(0.0, 1.0),
+                                minHeight: 4.5,
+                                backgroundColor: const Color(0xFFE2E8F0),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  item.iconColor.withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Progres: ${item.progressText}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Text(
+                          item.info,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w500,
+                            color: item.isUnlocked
+                                ? const Color(0xFF0066D6)
+                                : const Color(0xFF94A3B8),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -286,7 +264,7 @@ class PencapaianListSection extends StatelessWidget {
                   child: Text(
                     badgeText,
                     style: GoogleFonts.poppins(
-                      fontSize: 10.5,
+                      fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: badgeTextColor,
                     ),
@@ -296,9 +274,9 @@ class PencapaianListSection extends StatelessWidget {
                 const SizedBox(width: 4),
 
                 // Chevron
-                Icon(
+                const Icon(
                   Icons.chevron_right_rounded,
-                  color: const Color(0xFFCBD5E1),
+                  color: Color(0xFFCBD5E1),
                   size: 18,
                 ),
               ],
@@ -306,6 +284,117 @@ class PencapaianListSection extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF1F5F9),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.military_tech_outlined,
+              color: Color(0xFF94A3B8),
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Tidak Ada Lencana di Kategori "$activeFilter"',
+            style: GoogleFonts.poppins(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1E293B),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Silakan pilih kategori lain atau terus tingkatkan progres belajarmu!',
+            style: GoogleFonts.poppins(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF64748B),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingSkeleton() {
+    return Column(
+      children: List.generate(4, (index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFF1F5F9)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 120,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: 80,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
     );
   }
 }

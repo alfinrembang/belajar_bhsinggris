@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../models/pencapaian_model.dart';
 import '../../models/siswa_model.dart';
+import '../../services/api/pencapaian_service.dart';
 import '../../widgets/student_background.dart';
 import '../../widgets/student_sidebar.dart';
 import '../beranda/sections/bottom_nav_bar_section.dart';
@@ -14,9 +16,10 @@ import 'sections/pencapaian_summary_section.dart';
 import 'sections/pencapaian_filter_section.dart';
 import 'sections/pencapaian_list_section.dart';
 
-/// Halaman Pencapaian / Achievement Siswa.
-/// Menampilkan daftar lencana prestasi dengan filter dan progress keseluruhan.
-/// Disusun secara modular menggunakan konsep sections/partials.
+/// Halaman Pencapaian / Achievement Siswa Dinamis.
+/// Mengambil ringkasan lencana terbuka/terkunci serta seluruh daftar lencana
+/// prestasi (streak 7 hari, 10.000 pts game, kuis, materi, listening, dll.)
+/// secara real-time dari backend API.
 class PencapaianSiswaPage extends StatefulWidget {
   final SiswaModel? siswa;
 
@@ -29,6 +32,40 @@ class PencapaianSiswaPage extends StatefulWidget {
 class _PencapaianSiswaPageState extends State<PencapaianSiswaPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String _activeFilter = 'Semua';
+
+  bool _isLoading = true;
+  PencapaianSummaryModel _summary = const PencapaianSummaryModel(
+    totalTerbuka: 0,
+    totalTerkunci: 0,
+    selesai: 0,
+    totalLencana: 0,
+    persentase: 0,
+  );
+  List<PencapaianItemModel> _items = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPencapaian();
+  }
+
+  Future<void> _loadPencapaian() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final res = await PencapaianService.getPencapaian(siswaId: widget.siswa?.id);
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        if (res['success'] == true) {
+          _summary = res['summary'] as PencapaianSummaryModel;
+          _items = res['items'] as List<PencapaianItemModel>;
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +120,6 @@ class _PencapaianSiswaPageState extends State<PencapaianSiswaPage> {
               ),
             );
           } else if (index == 4) {
-            // Ke Halaman Profil (Tab ke-5 pada 5 menu navigasi)
             Navigator.pushReplacement(
               context,
               PageRouteBuilder(
@@ -99,71 +135,74 @@ class _PencapaianSiswaPageState extends State<PencapaianSiswaPage> {
       body: StudentBackground(
         child: SafeArea(
           bottom: false,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
+          child: RefreshIndicator(
+            onRefresh: _loadPencapaian,
+            color: const Color(0xFF0066D6),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
 
-                // 1. Header Section (Menu Hamburger + Judul Pencapaian)
-                PencapaianHeaderSection(
-                  onMenuTap: () {
-                    _scaffoldKey.currentState?.openDrawer();
-                  },
-                ),
+                  // 1. Header Section (Menu Hamburger + Judul Pencapaian)
+                  PencapaianHeaderSection(
+                    onMenuTap: () {
+                      _scaffoldKey.currentState?.openDrawer();
+                    },
+                  ),
 
-                const SizedBox(height: 36),
+                  const SizedBox(height: 36),
 
-                // 2. Ringkasan Lencana (Terbuka & Terkunci + Progress)
-                const PencapaianSummarySection(
-                  totalTerbuka: 5,
-                  totalTerkunci: 8,
-                  selesai: 5,
-                  totalLencana: 13,
-                ),
+                  // 2. Ringkasan Lencana Dinamis (Terbuka, Terkunci & Progress Keseluruhan)
+                  PencapaianSummarySection(
+                    totalTerbuka: _summary.totalTerbuka,
+                    totalTerkunci: _summary.totalTerkunci,
+                    selesai: _summary.selesai,
+                    totalLencana: _summary.totalLencana,
+                  ),
 
-                const SizedBox(height: 18),
+                  const SizedBox(height: 18),
 
-                // 3. Filter Tabs (Semua, Terbuka, Terkunci, Langka)
-                PencapaianFilterSection(
-                  activeFilter: _activeFilter,
-                  onFilterChanged: (filter) {
-                    setState(() {
-                      _activeFilter = filter;
-                    });
-                  },
-                ),
+                  // 3. Filter Tabs (Semua, Terbuka, Terkunci, Langka)
+                  PencapaianFilterSection(
+                    activeFilter: _activeFilter,
+                    onFilterChanged: (filter) {
+                      setState(() {
+                        _activeFilter = filter;
+                      });
+                    },
+                  ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // 4. Daftar Pencapaian / Lencana
-                PencapaianListSection(
-                  activeFilter: _activeFilter,
-                  onItemTap: (item) {
-                    Navigator.push(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (c, a, s) => DetailPencapaianPage(
-                          title: item.title,
-                          description: item.description,
-                          info: item.info,
-                          status: item.status,
-                          icon: item.icon,
-                          iconColor: item.iconColor,
-                          iconBgColor: item.iconBgColor,
+                  // 4. Daftar Pencapaian / Lencana Dinamis
+                  PencapaianListSection(
+                    activeFilter: _activeFilter,
+                    items: _items,
+                    isLoading: _isLoading,
+                    onRetry: _loadPencapaian,
+                    onItemTap: (item) {
+                      Navigator.push(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder: (c, a, s) => DetailPencapaianPage(
+                            item: item,
+                          ),
+                          transitionDuration: const Duration(milliseconds: 400),
+                          transitionsBuilder: (c, a, s, child) =>
+                              FadeTransition(opacity: a, child: child),
                         ),
-                        transitionDuration: const Duration(milliseconds: 400),
-                        transitionsBuilder: (c, a, s, child) =>
-                            FadeTransition(opacity: a, child: child),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
 
-                const SizedBox(height: 24),
-              ],
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         ),

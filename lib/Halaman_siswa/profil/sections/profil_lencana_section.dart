@@ -1,77 +1,85 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../models/pencapaian_model.dart';
+import '../../../services/api/pencapaian_service.dart';
+import '../../pencapaian/detail_pencapaian_page.dart';
 
-class LencanaItemData {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color circleColor;
-  final Color iconColor;
-  final bool isLocked;
+/// Section Lencana Prestasi pada Halaman Profil Siswa.
+/// Menampilkan Grid 6 Lencana Pencapaian Dinamis yang disinkronkan secara real-time
+/// dengan backend API, menampilkan total lencana terbuka dan navigasi ke detail.
+class ProfilLencanaSection extends StatefulWidget {
+  final int? siswaId;
+  final List<PencapaianItemModel>? preloadedItems;
 
-  const LencanaItemData({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.circleColor,
-    required this.iconColor,
-    this.isLocked = false,
+  const ProfilLencanaSection({
+    super.key,
+    this.siswaId,
+    this.preloadedItems,
   });
+
+  @override
+  State<ProfilLencanaSection> createState() => _ProfilLencanaSectionState();
 }
 
-/// Section Lencana Prestasi: Menampilkan Grid 6 Lencana Pencapaian Siswa
-/// dengan squircle pastel, ikon bertema, dan status terkunci/terbuka.
-class ProfilLencanaSection extends StatelessWidget {
-  const ProfilLencanaSection({super.key});
+class _ProfilLencanaSectionState extends State<ProfilLencanaSection> {
+  bool _isLoading = true;
+  List<PencapaianItemModel> _items = [];
+  int _totalTerbuka = 0;
 
-  static const List<LencanaItemData> lencanaList = [
-    LencanaItemData(
-      title: 'Top 10 RPL 1',
-      subtitle: 'Okt 2024',
-      icon: Icons.emoji_events_rounded,
-      circleColor: Color(0xFF6EE7B7), // Mint
-      iconColor: Color(0xFF047857),
-    ),
-    LencanaItemData(
-      title: 'Early Bird',
-      subtitle: '06:00 WIB',
-      icon: Icons.wb_sunny_rounded,
-      circleColor: Color(0xFFFDE68A), // Warm Gold
-      iconColor: Color(0xFFB45309),
-    ),
-    LencanaItemData(
-      title: 'Streak King',
-      subtitle: 'Minggu lalu',
-      icon: Icons.trending_up_rounded,
-      circleColor: Color(0xFFFECDD3), // Coral Rose
-      iconColor: Color(0xFFBE123C),
-    ),
-    LencanaItemData(
-      title: 'Bug Hunter',
-      subtitle: '50 Glosarium',
-      icon: Icons.bug_report_rounded,
-      circleColor: Color(0xFFDDD6FE), // Lavender
-      iconColor: Color(0xFF6D28D9),
-    ),
-    LencanaItemData(
-      title: 'Score 100',
-      subtitle: 'Quiz Modul 3',
-      icon: Icons.check_circle_rounded,
-      circleColor: Color(0xFFA7F3D0), // Emerald
-      iconColor: Color(0xFF047857),
-    ),
-    LencanaItemData(
-      title: 'TOEIC 550+',
-      subtitle: 'Terkunci',
-      icon: Icons.lock_rounded,
-      circleColor: Color(0xFFE2E8F0), // Gray Locked
-      iconColor: Color(0xFF64748B),
-      isLocked: true,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    if (widget.preloadedItems != null && widget.preloadedItems!.isNotEmpty) {
+      _items = widget.preloadedItems!;
+      _totalTerbuka = _items.where((i) => i.isUnlocked).length;
+      _isLoading = false;
+    } else {
+      _fetchLencana();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfilLencanaSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.siswaId != widget.siswaId) {
+      _fetchLencana();
+    }
+  }
+
+  Future<void> _fetchLencana() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final res = await PencapaianService.getPencapaian(siswaId: widget.siswaId);
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        if (res['success'] == true) {
+          final summary = res['summary'] as PencapaianSummaryModel?;
+          _totalTerbuka = summary?.totalTerbuka ?? 0;
+          _items = (res['items'] as List<PencapaianItemModel>?) ?? [];
+        }
+      });
+    }
+  }
+
+  /// Ambil 6 lencana untuk ditampilkan di profil (utamakan yang sudah terbuka)
+  List<PencapaianItemModel> get _displayBadges {
+    if (_items.isEmpty) return [];
+
+    final unlocked = _items.where((i) => i.isUnlocked).toList();
+    final locked = _items.where((i) => !i.isUnlocked).toList();
+
+    final combined = [...unlocked, ...locked];
+    return combined.take(6).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final badges = _displayBadges;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -93,7 +101,7 @@ class ProfilLencanaSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Baris: Ikon Medali Bintang + "Lencana Prestasi" + "5 Terbuka"
+          // Header Baris: Ikon Medali Bintang + "Lencana Prestasi" + "X Terbuka"
           Row(
             children: [
               Container(
@@ -110,96 +118,83 @@ class ProfilLencanaSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                'Lencana Prestasi',
-                style: GoogleFonts.poppins(
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF0F172A),
-                  letterSpacing: -0.2,
+              Expanded(
+                child: Text(
+                  'Lencana Prestasi',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF0F172A),
+                    letterSpacing: -0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
-              Text(
-                '5 Terbuka',
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0066D6),
+              const SizedBox(width: 8),
+              if (_isLoading)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                Text(
+                  '$_totalTerbuka Terbuka',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0066D6),
+                  ),
                 ),
-              ),
             ],
           ),
 
           const SizedBox(height: 14),
 
           // Grid 3 Kolom Lencana
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const spacing = 8.0;
-              final itemWidth = (constraints.maxWidth - (spacing * 2)) / 3;
+          if (_isLoading && badges.isEmpty)
+            _buildLoadingGrid()
+          else if (badges.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: Center(
+                child: Text(
+                  'Belum ada lencana yang tersedia.',
+                  style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                ),
+              ),
+            )
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const spacing = 8.0;
+                final itemWidth = (constraints.maxWidth - (spacing * 2)) / 3;
 
-              return Wrap(
-                spacing: spacing,
-                runSpacing: 10,
-                children: lencanaList.map((item) {
-                  return SizedBox(
-                    width: itemWidth,
-                    child: _buildBadgeCard(context, item),
-                  );
-                }).toList(),
-              );
-            },
-          ),
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: 10,
+                  children: badges.map((item) {
+                    return SizedBox(
+                      width: itemWidth,
+                      child: _buildBadgeCard(context, item),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildBadgeCard(BuildContext context, LencanaItemData item) {
+  Widget _buildBadgeCard(BuildContext context, PencapaianItemModel item) {
+    final isLocked = !item.isUnlocked;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: item.circleColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(item.icon, color: item.iconColor, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-              content: Text(
-                item.isLocked
-                    ? 'Lencana ini masih terkunci. Selesaikan tantangan dan kuis untuk membukanya!'
-                    : 'Selamat! Kamu telah meraih lencana "${item.title}" (${item.subtitle}).',
-                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF475569)),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text('Tutup', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF0066D6))),
-                ),
-              ],
-            ),
-          );
-        },
+        onTap: () => _showBadgeDialog(context, item),
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
@@ -207,7 +202,7 @@ class ProfilLencanaSection extends StatelessWidget {
             color: const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: const Color(0xFFF1F5F9),
+              color: isLocked ? const Color(0xFFF1F5F9) : item.iconColor.withValues(alpha: 0.15),
               width: 1,
             ),
           ),
@@ -219,11 +214,13 @@ class ProfilLencanaSection extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: item.circleColor,
+                  color: isLocked ? const Color(0xFFE2E8F0) : item.iconBgColor,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: item.circleColor.withValues(alpha: 0.35),
+                      color: isLocked
+                          ? Colors.transparent
+                          : item.iconColor.withValues(alpha: 0.25),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -231,8 +228,8 @@ class ProfilLencanaSection extends StatelessWidget {
                 ),
                 child: Center(
                   child: Icon(
-                    item.icon,
-                    color: item.iconColor,
+                    isLocked ? Icons.lock_outline_rounded : item.icon,
+                    color: isLocked ? const Color(0xFF94A3B8) : item.iconColor,
                     size: 22,
                   ),
                 ),
@@ -249,28 +246,189 @@ class ProfilLencanaSection extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: item.isLocked ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
+                  color: isLocked ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
                 ),
               ),
 
               const SizedBox(height: 2),
 
-              // Subtitle
+              // Subtitle / Status
               Text(
-                item.subtitle,
+                isLocked ? (item.progressText.isNotEmpty ? item.progressText : 'Terkunci') : item.info,
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(
                   fontSize: 9.5,
                   fontWeight: FontWeight.w500,
-                  color: const Color(0xFF94A3B8),
+                  color: isLocked ? const Color(0xFF94A3B8) : const Color(0xFF0066D6),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  void _showBadgeDialog(BuildContext context, PencapaianItemModel item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: item.isUnlocked ? item.iconBgColor : const Color(0xFFF1F5F9),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                item.isUnlocked ? item.icon : Icons.lock_outline_rounded,
+                color: item.isUnlocked ? item.iconColor : const Color(0xFF94A3B8),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                item.title,
+                style: GoogleFonts.poppins(fontSize: 15.5, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              item.description,
+              style: GoogleFonts.poppins(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF475569),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    item.isUnlocked ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                    size: 14,
+                    color: item.isUnlocked ? const Color(0xFF059669) : const Color(0xFF64748B),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      item.isUnlocked
+                          ? 'Telah Terbuka: ${item.info}'
+                          : (item.progressText.isNotEmpty ? 'Progres: ${item.progressText}' : 'Status: Masih Terkunci'),
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF334155),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Tutup',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0066D6),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            ),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (c) => DetailPencapaianPage(item: item),
+                ),
+              );
+            },
+            child: Text(
+              'Lihat Detail',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingGrid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 8.0;
+        final itemWidth = (constraints.maxWidth - (spacing * 2)) / 3;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: 10,
+          children: List.generate(6, (index) {
+            return SizedBox(
+              width: itemWidth,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE2E8F0),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 50,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

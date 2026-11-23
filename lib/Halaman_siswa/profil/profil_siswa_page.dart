@@ -145,8 +145,10 @@ class _ProfilSiswaPageState extends State<ProfilSiswaPage> {
 
                 const SizedBox(height: 20),
 
-                // 3. Lencana Prestasi (6 Badges)
-                const ProfilLencanaSection(),
+                // 3. Lencana Prestasi (6 Badges Dinamis)
+                ProfilLencanaSection(
+                  siswaId: _currentSiswa?.id,
+                ),
 
                 const SizedBox(height: 20),
 
