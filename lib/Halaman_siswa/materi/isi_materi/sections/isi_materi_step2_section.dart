@@ -49,14 +49,17 @@ class IsiMateriStep2Section extends StatelessWidget {
     List<Map<String, dynamic>> effectiveContohList = contohList ?? const [
       {
         'color': Color(0xFF70B974), // Soft Green
+        'icon': Icons.person_rounded, // Describing a friend / person
         'text': 'Describing a friends\nappereaance & personality',
       },
       {
         'color': Color(0xFFECA038), // Warm Amber
+        'icon': Icons.location_on_rounded, // Describing a place
         'text': 'Describing a place\nThat you like',
       },
       {
         'color': Color(0xFF5396E3), // Sky Blue
+        'icon': Icons.pets_rounded, // Describing an animal
         'text': 'Describing an animal\nThat you have',
       },
     ];
@@ -72,14 +75,17 @@ class IsiMateriStep2Section extends StatelessWidget {
       effectiveContohList = contohList ?? const [
         {
           'color': Color(0xFF70B974),
+          'icon': Icons.wb_sunny_rounded,
           'text': 'Expressing daily habits\n& morning routines',
         },
         {
           'color': Color(0xFFECA038),
+          'icon': Icons.public_rounded,
           'text': 'Stating scientific facts\n& general truths',
         },
         {
           'color': Color(0xFF5396E3),
+          'icon': Icons.bolt_rounded,
           'text': 'Describing current actions\nhappening right now',
         },
       ];
@@ -94,14 +100,17 @@ class IsiMateriStep2Section extends StatelessWidget {
       effectiveContohList = contohList ?? const [
         {
           'color': Color(0xFF70B974),
+          'icon': Icons.chat_bubble_rounded,
           'text': 'Sharing personal views\nin group discussions',
         },
         {
           'color': Color(0xFFECA038),
+          'icon': Icons.thumb_up_alt_rounded,
           'text': 'Agreeing politely\nwith team ideas',
         },
         {
           'color': Color(0xFF5396E3),
+          'icon': Icons.record_voice_over_rounded,
           'text': 'Expressing disagreement\nin a respectful way',
         },
       ];
@@ -116,14 +125,17 @@ class IsiMateriStep2Section extends StatelessWidget {
       effectiveContohList = contohList ?? const [
         {
           'color': Color(0xFF70B974),
+          'icon': Icons.groups_rounded,
           'text': 'Collaboration & teamwork\nin project meetings',
         },
         {
           'color': Color(0xFFECA038),
+          'icon': Icons.lightbulb_rounded,
           'text': 'Problem-solving & initiative\nat the workplace',
         },
         {
           'color': Color(0xFF5396E3),
+          'icon': Icons.timer_rounded,
           'text': 'Managing strict deadlines\n& work efficiency',
         },
       ];
@@ -155,6 +167,13 @@ class IsiMateriStep2Section extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFEFF5FC), // Soft Blue Accent Squircle
                 borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.menu_book_rounded,
+                  color: Color(0xFF1D4ED8),
+                  size: 22,
+                ),
               ),
             ),
           ],
@@ -242,6 +261,13 @@ class IsiMateriStep2Section extends StatelessWidget {
                 color: const Color(0xFFFDEEE9), // Soft Peach/Pink Accent Squircle
                 borderRadius: BorderRadius.circular(14),
               ),
+              child: const Center(
+                child: Icon(
+                  Icons.track_changes_rounded,
+                  color: Color(0xFFE25537),
+                  size: 22,
+                ),
+              ),
             ),
           ],
         ),
@@ -296,6 +322,7 @@ class IsiMateriStep2Section extends StatelessWidget {
               ...effectiveContohList.map((item) {
                 final color = item['color'] as Color;
                 final text = item['text'] as String;
+                final icon = item['icon'] as IconData? ?? _resolveIcon(text);
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -327,6 +354,13 @@ class IsiMateriStep2Section extends StatelessWidget {
                             color: color,
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          child: Center(
+                            child: Icon(
+                              icon,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 14),
                         // Teks Contoh
@@ -353,5 +387,73 @@ class IsiMateriStep2Section extends StatelessWidget {
         const SizedBox(height: 16),
       ],
     );
+  }
+
+  /// Menentukan icon default secara cerdas berdasarkan kata kunci judul contoh.
+  IconData _resolveIcon(String text) {
+    final lower = text.toLowerCase();
+    if (lower.contains('friend') ||
+        lower.contains('person') ||
+        lower.contains('people') ||
+        lower.contains('appearance') ||
+        lower.contains('appereaance')) {
+      return Icons.person_rounded;
+    }
+    if (lower.contains('place') ||
+        lower.contains('location') ||
+        lower.contains('city') ||
+        lower.contains('building') ||
+        lower.contains('room')) {
+      return Icons.location_on_rounded;
+    }
+    if (lower.contains('animal') ||
+        lower.contains('pet') ||
+        lower.contains('dog') ||
+        lower.contains('cat')) {
+      return Icons.pets_rounded;
+    }
+    if (lower.contains('habit') ||
+        lower.contains('routine') ||
+        lower.contains('morning') ||
+        lower.contains('daily')) {
+      return Icons.wb_sunny_rounded;
+    }
+    if (lower.contains('fact') ||
+        lower.contains('truth') ||
+        lower.contains('science')) {
+      return Icons.public_rounded;
+    }
+    if (lower.contains('action') ||
+        lower.contains('now') ||
+        lower.contains('present')) {
+      return Icons.bolt_rounded;
+    }
+    if (lower.contains('view') ||
+        lower.contains('opinion') ||
+        lower.contains('share')) {
+      return Icons.chat_bubble_rounded;
+    }
+    if (lower.contains('agree')) {
+      return Icons.thumb_up_alt_rounded;
+    }
+    if (lower.contains('disagree') || lower.contains('polite')) {
+      return Icons.record_voice_over_rounded;
+    }
+    if (lower.contains('team') ||
+        lower.contains('collaborat') ||
+        lower.contains('group')) {
+      return Icons.groups_rounded;
+    }
+    if (lower.contains('problem') ||
+        lower.contains('initiative') ||
+        lower.contains('solve')) {
+      return Icons.lightbulb_rounded;
+    }
+    if (lower.contains('deadline') ||
+        lower.contains('efficien') ||
+        lower.contains('time')) {
+      return Icons.timer_rounded;
+    }
+    return Icons.auto_stories_rounded;
   }
 }

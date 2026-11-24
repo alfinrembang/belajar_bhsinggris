@@ -269,8 +269,9 @@ class _QuizSiswaPageState extends State<QuizSiswaPage> {
 
                   const SizedBox(height: 36),
 
-                  // 2. Hero Card "JOIN ROOM" dengan input kode room & Tombol GO
+                  // 2. Hero Banner Kuis Evaluasi
                   QuizJoinRoomSection(
+                    totalKuis: _quizzes.length,
                     onJoinRoom: _handleJoinRoom,
                   ),
 

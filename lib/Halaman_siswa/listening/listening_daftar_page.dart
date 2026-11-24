@@ -7,8 +7,7 @@ import 'listening_siswa_page.dart';
 
 /// Halaman Daftar Paket Modul Listening Siswa (Dinamis dari Backend Laravel).
 /// Siswa dapat memilih paket latihan audio listening (misal: "At the Airport", "Ordering Food"),
-/// memfilter berdasarkan tingkat kesulitan (Beginner, Intermediate, Advanced),
-/// serta melihat riwayat modul yang telah selesai dikerjakan (+XP didapat).
+/// mencari modul percakapan, serta melihat riwayat modul yang telah selesai dikerjakan (+XP didapat).
 class ListeningDaftarPage extends StatefulWidget {
   final SiswaModel? siswa;
 
@@ -22,16 +21,8 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
   bool _isLoading = true;
   String? _errorMessage;
   List<Map<String, dynamic>> _allPackages = [];
-  String _selectedDifficulty = 'Semua';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-
-  final List<String> _difficultyFilters = [
-    'Semua',
-    'Beginner',
-    'Intermediate',
-    'Advanced',
-  ];
 
   @override
   void initState() {
@@ -52,7 +43,6 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
     });
 
     final res = await ApiService.getDaftarListening(
-      tingkat: _selectedDifficulty == 'Semua' ? null : _selectedDifficulty,
       siswaId: widget.siswa?.id,
     );
 
@@ -78,14 +68,6 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
 
   List<Map<String, dynamic>> get _filteredPackages {
     return _allPackages.where((item) {
-      // Filter Tingkat Kesulitan
-      if (_selectedDifficulty != 'Semua') {
-        final diff = item['tingkat_kesulitan']?.toString().toLowerCase() ?? '';
-        if (diff != _selectedDifficulty.toLowerCase()) {
-          return false;
-        }
-      }
-
       // Filter Pencarian
       if (_searchQuery.trim().isNotEmpty) {
         final q = _searchQuery.toLowerCase();
@@ -99,32 +81,6 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
 
       return true;
     }).toList();
-  }
-
-  Color _getDifficultyColor(String? level) {
-    switch (level?.toLowerCase()) {
-      case 'beginner':
-        return const Color(0xFF059669); // Emerald Green
-      case 'intermediate':
-        return const Color(0xFF0056D2); // Royal Blue
-      case 'advanced':
-        return const Color(0xFFD97706); // Amber Orange
-      default:
-        return const Color(0xFF475569);
-    }
-  }
-
-  Color _getDifficultyBgColor(String? level) {
-    switch (level?.toLowerCase()) {
-      case 'beginner':
-        return const Color(0xFFECFDF5);
-      case 'intermediate':
-        return const Color(0xFFEFF6FF);
-      case 'advanced':
-        return const Color(0xFFFEF3C7);
-      default:
-        return const Color(0xFFF1F5F9);
-    }
   }
 
   void _openListeningPackage(Map<String, dynamic> item) async {
@@ -177,14 +133,9 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
                 // 3. Search Bar
                 _buildSearchBar(),
 
-                const SizedBox(height: 14),
-
-                // 4. Filter Chips (Semua, Beginner, Intermediate, Advanced)
-                _buildFilterChips(),
-
                 const SizedBox(height: 18),
 
-                // 5. Header Jumlah Paket
+                // 4. Header Jumlah Paket
                 _buildListCounterHeader(),
 
                 const SizedBox(height: 12),
@@ -421,45 +372,6 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
     );
   }
 
-  Widget _buildFilterChips() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: _difficultyFilters.map((diff) {
-          final isSelected = _selectedDifficulty == diff;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label: Text(diff),
-              selected: isSelected,
-              onSelected: (val) {
-                setState(() {
-                  _selectedDifficulty = diff;
-                });
-              },
-              labelStyle: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                color: isSelected ? Colors.white : const Color(0xFF475569),
-              ),
-              backgroundColor: Colors.white,
-              selectedColor: const Color(0xFF0056D2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: isSelected ? const Color(0xFF0056D2) : const Color(0xFFE2E8F0),
-                ),
-              ),
-              showCheckmark: false,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
   Widget _buildListCounterHeader() {
     final count = _filteredPackages.length;
     return Row(
@@ -557,7 +469,7 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Coba sesuaikan kata kunci pencarian atau ubah filter tingkat kesulitan.',
+              'Coba sesuaikan kata kunci pencarian judul atau topik listening.',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 12,
@@ -578,7 +490,6 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
         final item = packages[index];
         final id = int.tryParse(item['id']?.toString() ?? '') ?? 0;
         final bool isCompleted = item['is_completed'] == true || ApiService.isListeningCompleted(id);
-        final String diff = item['tingkat_kesulitan']?.toString() ?? 'Beginner';
         final String kelas = item['tingkat_kelas']?.toString() ?? 'Semua Kelas';
         final String judul = item['judul']?.toString() ?? 'Judul Paket';
         final String deskripsi = item['deskripsi']?.toString() ?? '';
@@ -611,27 +522,9 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Row Tag: Level & Kelas & Status Selesai
+                  // Row Tag: Kelas & Status Selesai
                   Row(
                     children: [
-                      // Badge Level
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getDifficultyBgColor(diff),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          diff,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: _getDifficultyColor(diff),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
                       // Badge Kelas
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -639,13 +532,20 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
                           color: const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
-                          kelas,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF475569),
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.school_rounded, size: 12, color: Color(0xFF475569)),
+                            const SizedBox(width: 4),
+                            Text(
+                              kelas,
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF475569),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
 
