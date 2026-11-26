@@ -257,4 +257,18 @@ class ApiService {
         sandiLama: sandiLama,
         sandiBaru: sandiBaru,
       );
+
+  // ----------------------------------------------------
+  // Riwayat Aktivitas Belajar Siswa (Materi, Listening, Kuis, Game)
+  // ----------------------------------------------------
+  static Future<Map<String, dynamic>> getAktivitasTerbaru({
+    int? siswaId,
+    int limit = 5,
+    String type = 'all',
+  }) =>
+      SiswaService.getAktivitasTerbaru(
+        siswaId: siswaId,
+        limit: limit,
+        type: type,
+      );
 }

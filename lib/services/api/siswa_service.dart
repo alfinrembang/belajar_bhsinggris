@@ -106,4 +106,47 @@ class SiswaService {
       };
     }
   }
+
+  /// 19. Ambil Riwayat Aktivitas Terbaru Siswa (GET /api/siswa/aktivitas-terbaru)
+  /// Mengambil gabungan pengerjaan: Materi, Listening, Kuis, & Game
+  static Future<Map<String, dynamic>> getAktivitasTerbaru({
+    int? siswaId,
+    int limit = 5,
+    String type = 'all',
+  }) async {
+    try {
+      final response = await ApiClient.sendRequest((baseUrl) {
+        final queryParams = <String, String>{
+          'limit': limit.toString(),
+          'type': type,
+        };
+        if (siswaId != null) queryParams['siswa_id'] = siswaId.toString();
+        final uri = Uri.parse('$baseUrl/siswa/aktivitas-terbaru').replace(
+          queryParameters: queryParams,
+        );
+        return http.get(uri, headers: {'Accept': 'application/json'});
+      });
+
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      if (response.statusCode == 200 && body['status'] == 'success') {
+        return {
+          'success': true,
+          'total': body['total_aktivitas'] ?? 0,
+          'data': body['data'] ?? [],
+        };
+      }
+
+      return {
+        'success': false,
+        'message': body['message'] ?? 'Gagal memuat aktivitas terbaru.',
+        'data': [],
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal mengambil data aktivitas: $e',
+        'data': [],
+      };
+    }
+  }
 }
