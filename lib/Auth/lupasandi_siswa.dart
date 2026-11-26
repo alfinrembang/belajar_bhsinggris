@@ -221,7 +221,7 @@ class _LupaSandiSiswaPageState extends State<LupaSandiSiswaPage> {
                       Transform.translate(
                         offset: const Offset(0, 16),
                         child: Text(
-                          "WELCOME\nTO\nSIP",
+                          "WELCOME\nTO\nSEP",
                           textAlign: TextAlign.center,
                           style: GoogleFonts.poppins(
                             fontSize: 22,

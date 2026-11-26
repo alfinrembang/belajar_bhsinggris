@@ -203,7 +203,7 @@ class _RegisSiswaPageState extends State<RegisSiswaPage> {
                   Transform.translate(
                     offset: const Offset(0, 16),
                     child: Text(
-                      "WELCOME\nTO\nSIP",
+                      "WELCOME\nTO\nSEP",
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
                         fontSize: 22,

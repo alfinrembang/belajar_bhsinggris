@@ -289,7 +289,7 @@ class _LoadingScreenState extends State<LoadingScreen>
 
                 const SizedBox(height: 10),
 
-                // Teks Judul SIP & STUDY ENGLISH PRIMA
+                // Teks Judul SEP & STUDY ENGLISH PRIMA
                 RepaintBoundary(
                   child: FadeTransition(
                     opacity: _textOpacity,
@@ -298,7 +298,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                       child: Column(
                         children: [
                           Text(
-                            'SIP',
+                            'SEP',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.poppins(
                               fontSize: 38,
