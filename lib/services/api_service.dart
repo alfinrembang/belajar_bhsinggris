@@ -8,6 +8,7 @@ export 'api/listening_service.dart';
 export 'api/quiz_service.dart';
 export 'api/fishing_service.dart';
 export 'api/siswa_service.dart';
+export 'session_service.dart';
 
 import 'api/api_client.dart';
 import 'api/auth_service.dart';
@@ -16,6 +17,8 @@ import 'api/listening_service.dart';
 import 'api/quiz_service.dart';
 import 'api/fishing_service.dart';
 import 'api/siswa_service.dart';
+import 'session_service.dart';
+import '../models/siswa_model.dart';
 
 /// Facade untuk menjaga kompatibilitas mundur (backward-compatible)
 /// sehingga seluruh halaman UI tetap memanggil `ApiService.xxx()` tanpa error.
@@ -66,6 +69,20 @@ class ApiService {
 
   static Future<bool> logoutSiswa({required String token}) =>
       AuthService.logoutSiswa(token: token);
+
+  // ----------------------------------------------------
+  // Sesi Lokal & Auto-Login Siswa
+  // ----------------------------------------------------
+  static Future<void> saveSession(SiswaModel siswa) =>
+      SessionService.saveSession(siswa);
+
+  static Future<SiswaModel?> getSavedSession() =>
+      SessionService.getSavedSession();
+
+  static Future<void> clearSession() => SessionService.clearSession();
+
+  static Future<SiswaModel?> validateAndRefreshSession() =>
+      SessionService.validateAndRefreshSession();
 
   // ----------------------------------------------------
   // Modul Materi & Reading

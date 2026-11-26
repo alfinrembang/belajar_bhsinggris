@@ -356,6 +356,11 @@ class _KelolaProfilPageState extends State<KelolaProfilPage> {
         updatedSiswa = updatedSiswa.copyWith(foto: _imageFile!.path);
       }
 
+      // Perbarui sesi tersimpan di perangkat lokal
+      await ApiService.saveSession(updatedSiswa);
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(res['message'] ?? 'Profil berhasil diperbarui!'),

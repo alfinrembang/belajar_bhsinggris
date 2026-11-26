@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../Auth/login_siswa.dart';
+import '../Halaman_siswa/beranda/beranda_siswa_page.dart';
+import '../models/siswa_model.dart';
+import '../services/session_service.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -18,6 +21,7 @@ class _LoadingScreenState extends State<LoadingScreen>
   bool _isImagesPrecached = false;
   bool _showLogin = false;
   bool _isOverlayRemoved = false;
+  SiswaModel? _savedSiswa;
 
   // Animasi berurutan untuk elemen loading screen
   late Animation<double> _cloudOpacity;
@@ -101,8 +105,11 @@ class _LoadingScreenState extends State<LoadingScreen>
       duration: const Duration(milliseconds: 1400),
     )..repeat();
 
-    // Step 5: Setelah 7 detik, lakukan transisi cross-fade pre-warmed yang 100% bebas frame drop
-    _navigationTimer = Timer(const Duration(seconds: 7), () {
+    // Periksa status login tersimpan (Auto-login)
+    _checkAuthSession();
+
+    // Setelah animasi loading selesai (3.5 detik), lakukan transisi cross-fade pre-warmed
+    _navigationTimer = Timer(const Duration(milliseconds: 3500), () {
       if (mounted) {
         _dotsController.stop();
         setState(() {
@@ -110,6 +117,29 @@ class _LoadingScreenState extends State<LoadingScreen>
         });
       }
     });
+  }
+
+  /// Membaca sesi login lokal dan memicu pembaruan di latar belakang jika online
+  Future<void> _checkAuthSession() async {
+    try {
+      final siswa = await SessionService.getSavedSession();
+      if (mounted && siswa != null) {
+        setState(() {
+          _savedSiswa = siswa;
+        });
+      }
+
+      // Validasi token dan sinkronkan profil terbaru di background
+      if (siswa != null && siswa.token != null && siswa.token!.isNotEmpty) {
+        SessionService.validateAndRefreshSession().then((refreshed) {
+          if (mounted && refreshed != null) {
+            setState(() {
+              _savedSiswa = refreshed;
+            });
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -137,12 +167,14 @@ class _LoadingScreenState extends State<LoadingScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Form Login Siswa (Pre-warmed di memori GPU, meluncur naik perlahan & sangat halus)
+          // 1. Target Halaman (Beranda Siswa jika sudah ada sesi aktif, atau Form Login jika belum login)
           AnimatedSlide(
             offset: _showLogin ? Offset.zero : const Offset(0, 0.025),
             duration: const Duration(milliseconds: 750),
             curve: Curves.easeOutCubic,
-            child: const LoginSiswaPage(),
+            child: _savedSiswa != null
+                ? BerandaSiswaPage(siswa: _savedSiswa)
+                : const LoginSiswaPage(),
           ),
 
           // 2. Loading Screen Overlay (Melapisi di atasnya lalu cross-fade keluar tanpa frame drop)

@@ -105,6 +105,12 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
 
     if (result['success'] == true) {
       final SiswaModel? siswa = result['siswa'];
+
+      // Simpan sesi login lokal secara persisten (Auto-Login)
+      if (siswa != null) {
+        await ApiService.saveSession(siswa);
+      }
+
       _showNotification('Selamat datang, ${siswa?.namaLengkap ?? 'Siswa'}!');
 
       Navigator.pushReplacement(

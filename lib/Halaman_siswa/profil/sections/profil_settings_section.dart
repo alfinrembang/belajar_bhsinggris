@@ -377,6 +377,9 @@ class _ProfilSettingsSectionState extends State<ProfilSettingsSection> {
                           if (widget.siswa?.token != null && widget.siswa!.token!.isNotEmpty) {
                             ApiService.logoutSiswa(token: widget.siswa!.token!);
                           }
+                          // Bersihkan sesi lokal agar auto-login tidak aktif kembali
+                          await ApiService.clearSession();
+                          if (!context.mounted) return;
                           Navigator.pushAndRemoveUntil(
                             context,
                             PageRouteBuilder(

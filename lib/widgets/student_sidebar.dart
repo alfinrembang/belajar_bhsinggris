@@ -637,6 +637,11 @@ class StudentSidebar extends StatelessWidget {
                             ApiService.logoutSiswa(token: siswa!.token!);
                           }
 
+                          // Bersihkan sesi lokal agar auto-login tidak aktif kembali
+                          await ApiService.clearSession();
+
+                          if (!context.mounted) return;
+
                           // Arahkan ke halaman login dan hapus seluruh tumpukan halaman
                           Navigator.pushAndRemoveUntil(
                             context,
