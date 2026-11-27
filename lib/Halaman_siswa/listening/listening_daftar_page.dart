@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/siswa_model.dart';
 import '../../services/api_service.dart';
+import '../../widgets/modul_status_widgets.dart';
 import '../../widgets/student_background.dart';
 import 'listening_siswa_page.dart';
 
@@ -22,6 +23,7 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
   String? _errorMessage;
   List<Map<String, dynamic>> _allPackages = [];
   String _searchQuery = '';
+  ModulStatusFilter _selectedStatus = ModulStatusFilter.semua;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -66,7 +68,12 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
     }
   }
 
-  List<Map<String, dynamic>> get _filteredPackages {
+  bool _isPackageCompleted(Map<String, dynamic> item) {
+    final id = int.tryParse(item['id']?.toString() ?? '') ?? 0;
+    return item['is_completed'] == true || ApiService.isListeningCompleted(id);
+  }
+
+  List<Map<String, dynamic>> get _searchFilteredPackages {
     return _allPackages.where((item) {
       // Filter Pencarian
       if (_searchQuery.trim().isNotEmpty) {
@@ -81,6 +88,12 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
 
       return true;
     }).toList();
+  }
+
+  List<Map<String, dynamic>> get _filteredPackages {
+    return _searchFilteredPackages
+        .where((item) => _selectedStatus.matches(_isPackageCompleted(item)))
+        .toList();
   }
 
   void _openListeningPackage(Map<String, dynamic> item) async {
@@ -139,6 +152,25 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
                 _buildListCounterHeader(),
 
                 const SizedBox(height: 12),
+
+                // 5. Filter Status (Semua / Belum Selesai / Selesai)
+                StatusFilterTabs(
+                  selected: _selectedStatus,
+                  totalCount: _searchFilteredPackages.length,
+                  pendingCount: _searchFilteredPackages
+                      .where((item) => !_isPackageCompleted(item))
+                      .length,
+                  completedCount: _searchFilteredPackages
+                      .where((item) => _isPackageCompleted(item))
+                      .length,
+                  onChanged: (status) {
+                    setState(() {
+                      _selectedStatus = status;
+                    });
+                  },
+                ),
+
+                const SizedBox(height: 14),
 
                 // 6. Daftar Kartu Paket Listening
                 _buildPackageList(),
@@ -460,7 +492,12 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
             const Icon(Icons.search_off_rounded, size: 52, color: Color(0xFF94A3B8)),
             const SizedBox(height: 12),
             Text(
-              'Tidak ada paket listening ditemukan',
+              switch (_selectedStatus) {
+                ModulStatusFilter.belumSelesai => 'Semua paket listening sudah selesai',
+                ModulStatusFilter.selesai => 'Belum ada paket listening yang selesai',
+                ModulStatusFilter.semua => 'Tidak ada paket listening ditemukan',
+              },
+              textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -469,7 +506,9 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Coba sesuaikan kata kunci pencarian judul atau topik listening.',
+              _selectedStatus == ModulStatusFilter.semua
+                  ? 'Coba sesuaikan kata kunci pencarian judul atau topik listening.'
+                  : 'Pilih filter lain untuk melihat seluruh daftar paket listening.',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 12,
@@ -488,8 +527,9 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
       separatorBuilder: (context, index) => const SizedBox(height: 14),
       itemBuilder: (context, index) {
         final item = packages[index];
-        final id = int.tryParse(item['id']?.toString() ?? '') ?? 0;
-        final bool isCompleted = item['is_completed'] == true || ApiService.isListeningCompleted(id);
+        final bool isCompleted = _isPackageCompleted(item);
+        final bool isBaru = item['is_baru'] == true && !isCompleted;
+        final String? createdAt = item['created_at']?.toString();
         final String kelas = item['tingkat_kelas']?.toString() ?? 'Semua Kelas';
         final String judul = item['judul']?.toString() ?? 'Judul Paket';
         final String deskripsi = item['deskripsi']?.toString() ?? '';
@@ -522,37 +562,46 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Row Tag: Kelas & Status Selesai
+                  // Row Tag: Kelas, BARU (<= 3 hari & belum selesai), & Status Selesai
                   Row(
                     children: [
-                      // Badge Kelas
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      Expanded(
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            const Icon(Icons.school_rounded, size: 12, color: Color(0xFF475569)),
-                            const SizedBox(width: 4),
-                            Text(
-                              kelas,
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF475569),
+                            // Badge Kelas
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.school_rounded, size: 12, color: Color(0xFF475569)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    kelas,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                            if (isBaru) const BaruBadge(),
                           ],
                         ),
                       ),
 
-                      const Spacer(),
-
                       // Selesai Badge
-                      if (isCompleted)
+                      if (isCompleted) ...[
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
@@ -576,6 +625,7 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
                             ],
                           ),
                         ),
+                      ],
                     ],
                   ),
 
@@ -605,6 +655,11 @@ class _ListeningDaftarPageState extends State<ListeningDaftarPage> {
                         height: 1.35,
                       ),
                     ),
+                  ],
+
+                  if (createdAt != null && createdAt.trim().isNotEmpty) ...[
+                    const SizedBox(height: 7),
+                    UploadTimeTag(createdAt: createdAt),
                   ],
 
                   const SizedBox(height: 14),

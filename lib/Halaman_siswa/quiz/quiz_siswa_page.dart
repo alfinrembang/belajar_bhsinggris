@@ -4,6 +4,7 @@ import '../../../models/siswa_model.dart';
 import '../../../services/api_service.dart';
 import '../../../widgets/student_background.dart';
 import '../../../widgets/student_sidebar.dart';
+import '../../../widgets/modul_status_widgets.dart';
 import '../beranda/beranda_siswa_page.dart';
 import '../beranda/sections/bottom_nav_bar_section.dart';
 import '../materi/materi_siswa_page.dart';
@@ -34,6 +35,7 @@ class _QuizSiswaPageState extends State<QuizSiswaPage> {
   bool _isLoading = true;
   String? _errorMessage;
   List<QuizItemData> _quizzes = [];
+  ModulStatusFilter _selectedStatus = ModulStatusFilter.semua;
 
   @override
   void initState() {
@@ -57,6 +59,7 @@ class _QuizSiswaPageState extends State<QuizSiswaPage> {
         final List<dynamic> rawList = res['data'] ?? [];
         final mapped = rawList.map((item) {
           final cat = item['kategori']?.toString() ?? 'General';
+          final completed = item['is_completed'] == true;
           return QuizItemData(
             id: item['id']?.toString() ?? '0',
             title: item['judul']?.toString() ?? 'Kuis Bahasa Inggris',
@@ -65,10 +68,12 @@ class _QuizSiswaPageState extends State<QuizSiswaPage> {
             jumlahSoal: int.tryParse(item['jumlah_soal']?.toString() ?? '20') ?? 20,
             xp: int.tryParse(item['xp_reward']?.toString() ?? '60') ?? 60,
             kodeRoom: item['kode_room']?.toString(),
-            isCompleted: item['is_completed'] == true,
+            isCompleted: completed,
             skorTerakhir: item['skor_terakhir'] != null
                 ? int.tryParse(item['skor_terakhir'].toString())
                 : null,
+            createdAt: item['created_at']?.toString(),
+            isBaru: item['is_baru'] == true && !completed,
             customIcon: _getCategoryIcon(cat),
           );
         }).toList();
@@ -367,11 +372,31 @@ class _QuizSiswaPageState extends State<QuizSiswaPage> {
                         ],
                       ),
                     )
-                  else
-                    QuizListSection(
-                      items: _quizzes,
-                      onMulaiQuiz: _bukaIsiQuiz,
+                  else ...[
+                    StatusFilterTabs(
+                      selected: _selectedStatus,
+                      totalCount: _quizzes.length,
+                      pendingCount: _quizzes.where((q) => !q.isCompleted).length,
+                      completedCount: _quizzes.where((q) => q.isCompleted).length,
+                      onChanged: (status) {
+                        setState(() {
+                          _selectedStatus = status;
+                        });
+                      },
                     ),
+                    const SizedBox(height: 14),
+                    QuizListSection(
+                      items: _quizzes
+                          .where((q) => _selectedStatus.matches(q.isCompleted))
+                          .toList(),
+                      onMulaiQuiz: _bukaIsiQuiz,
+                      emptyMessage: switch (_selectedStatus) {
+                        ModulStatusFilter.belumSelesai => 'Semua kuis sudah selesai dikerjakan',
+                        ModulStatusFilter.selesai => 'Belum ada kuis yang selesai dikerjakan',
+                        ModulStatusFilter.semua => null,
+                      },
+                    ),
+                  ],
 
                   const SizedBox(height: 28),
                 ],

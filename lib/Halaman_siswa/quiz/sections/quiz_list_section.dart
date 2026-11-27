@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../isi_quiz/isi_quiz_page.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/materi_thumbnail.dart';
+import '../../../widgets/modul_status_widgets.dart';
 
 /// Model Data Kuis Siswa
 class QuizItemData {
@@ -16,6 +17,8 @@ class QuizItemData {
   final String? kodeRoom;
   final bool isCompleted;
   final int? skorTerakhir;
+  final String? createdAt;
+  final bool isBaru;
 
   const QuizItemData({
     required this.id,
@@ -28,6 +31,8 @@ class QuizItemData {
     this.kodeRoom,
     this.isCompleted = false,
     this.skorTerakhir,
+    this.createdAt,
+    this.isBaru = false,
   });
 }
 
@@ -37,11 +42,13 @@ class QuizItemData {
 class QuizListSection extends StatelessWidget {
   final List<QuizItemData> items;
   final ValueChanged<QuizItemData>? onMulaiQuiz;
+  final String? emptyMessage;
 
   const QuizListSection({
     super.key,
     required this.items,
     this.onMulaiQuiz,
+    this.emptyMessage,
   });
 
   @override
@@ -55,7 +62,8 @@ class QuizListSection extends StatelessWidget {
             const Icon(Icons.quiz_outlined, size: 48, color: Color(0xFF94A3B8)),
             const SizedBox(height: 10),
             Text(
-              'Belum ada kuis yang tersedia saat ini',
+              emptyMessage ?? 'Belum ada kuis yang tersedia saat ini',
+              textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -122,28 +130,32 @@ class QuizListSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Status Selesai
-                    if (item.isCompleted) ...[
-                      Row(
+                    // Badge BARU (<= 3 hari & belum selesai) dan Status Selesai
+                    if ((item.isBaru && !item.isCompleted) || item.isCompleted) ...[
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              item.skorTerakhir != null ? 'Nilai: ${item.skorTerakhir}' : 'Selesai',
-                              style: GoogleFonts.poppins(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF16A34A),
+                          if (item.isBaru && !item.isCompleted) const BaruBadge(),
+                          if (item.isCompleted)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                item.skorTerakhir != null ? 'Nilai: ${item.skorTerakhir}' : 'Selesai',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF16A34A),
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 4),
                     ],
 
                     // Judul Kuis
@@ -195,6 +207,11 @@ class QuizListSection extends StatelessWidget {
                         ),
                       ],
                     ),
+
+                    if (item.createdAt != null && item.createdAt!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      UploadTimeTag(createdAt: item.createdAt),
+                    ],
 
                     const SizedBox(height: 5),
 

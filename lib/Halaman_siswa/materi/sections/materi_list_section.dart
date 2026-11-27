@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../widgets/custom_button.dart';
 import '../../../../widgets/materi_thumbnail.dart';
+import '../../../../widgets/modul_status_widgets.dart';
 
 /// Model item materi pembelajaran
 class MateriItemData {
@@ -16,6 +17,8 @@ class MateriItemData {
   final String? gambarUrl;
   final String? audioUrl;
   final bool isCompleted;
+  final String? createdAt;
+  final bool isBaru;
 
   const MateriItemData({
     required this.id,
@@ -29,6 +32,8 @@ class MateriItemData {
     this.gambarUrl,
     this.audioUrl,
     this.isCompleted = false,
+    this.createdAt,
+    this.isBaru = false,
   });
 
   factory MateriItemData.fromJson(Map<String, dynamic> json) {
@@ -52,6 +57,8 @@ class MateriItemData {
       gambarUrl: json['gambar_url']?.toString(),
       audioUrl: json['audio_url']?.toString(),
       isCompleted: completed,
+      createdAt: json['created_at']?.toString(),
+      isBaru: json['is_baru'] == true && !completed,
     );
   }
 }
@@ -61,11 +68,15 @@ class MateriItemData {
 class MateriListSection extends StatelessWidget {
   final List<MateriItemData> items;
   final ValueChanged<MateriItemData>? onMulaiBelajar;
+  final String? emptyTitle;
+  final String? emptySubtitle;
 
   const MateriListSection({
     super.key,
     required this.items,
     this.onMulaiBelajar,
+    this.emptyTitle,
+    this.emptySubtitle,
   });
 
   @override
@@ -136,7 +147,7 @@ class MateriListSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Belum Ada Materi Tersedia',
+                  emptyTitle ?? 'Belum Ada Materi Tersedia',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -145,7 +156,7 @@ class MateriListSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Materi untuk kategori ini belum dipublikasikan oleh guru.',
+                  emptySubtitle ?? 'Materi untuk kategori ini belum dipublikasikan oleh guru.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
                     fontSize: 12,
@@ -224,15 +235,17 @@ class MateriListSection extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 2. Badge Kategori Reusable Konsisten
-                              Row(
+                              // 2. Badge Kategori, Kelas, BARU (<=3 hari & belum selesai), & Selesai
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 5,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   MateriBadge(
                                     category: item.category,
                                   ),
                                   if (item.tingkatKelas != null &&
-                                      item.tingkatKelas!.isNotEmpty) ...[
-                                    const SizedBox(width: 6),
+                                      item.tingkatKelas!.isNotEmpty)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 8,
@@ -253,9 +266,9 @@ class MateriListSection extends StatelessWidget {
                                         ),
                                       ),
                                     ),
-                                  ],
-                                  if (item.isCompleted) ...[
-                                    const SizedBox(width: 6),
+                                  if (item.isBaru && !item.isCompleted)
+                                    const BaruBadge(),
+                                  if (item.isCompleted)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 8,
@@ -289,7 +302,6 @@ class MateriListSection extends StatelessWidget {
                                         ],
                                       ),
                                     ),
-                                  ],
                                 ],
                               ),
 
@@ -318,6 +330,12 @@ class MateriListSection extends StatelessWidget {
                                   height: 1.35,
                                 ),
                               ),
+
+                              if (item.createdAt != null &&
+                                  item.createdAt!.trim().isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                UploadTimeTag(createdAt: item.createdAt),
+                              ],
                             ],
                           ),
                         ),

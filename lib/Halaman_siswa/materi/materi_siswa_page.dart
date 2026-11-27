@@ -4,6 +4,7 @@ import '../../../models/siswa_model.dart';
 import '../../../services/api_service.dart';
 import '../../../widgets/student_background.dart';
 import '../../../widgets/student_sidebar.dart';
+import '../../../widgets/modul_status_widgets.dart';
 import '../beranda/beranda_siswa_page.dart';
 import '../quiz/quiz_siswa_page.dart';
 import '../game/game_siswa_page.dart';
@@ -34,6 +35,7 @@ class _MateriSiswaPageState extends State<MateriSiswaPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedNavIndex = 1; // Tab Materi aktif (Index 1)
   String _selectedCategory = 'Semua';
+  ModulStatusFilter _selectedStatus = ModulStatusFilter.semua;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -84,7 +86,7 @@ class _MateriSiswaPageState extends State<MateriSiswaPage> {
   }
 
   // Filter daftar materi berdasarkan kategori & kata kunci pencarian
-  List<MateriItemData> get _filteredMateri {
+  List<MateriItemData> get _baseFilteredMateri {
     return _materiList.where((item) {
       final isAll = _selectedCategory == 'Semua' || _selectedCategory == 'All';
       final matchCategory = isAll ||
@@ -98,6 +100,12 @@ class _MateriSiswaPageState extends State<MateriSiswaPage> {
 
       return matchCategory && matchSearch;
     }).toList();
+  }
+
+  List<MateriItemData> get _filteredMateri {
+    return _baseFilteredMateri
+        .where((item) => _selectedStatus.matches(item.isCompleted))
+        .toList();
   }
 
   void _navigateToNavIndex(int index) {
@@ -364,11 +372,40 @@ class _MateriSiswaPageState extends State<MateriSiswaPage> {
                         ],
                       ),
                     )
-                  else
+                  else ...[
+                    StatusFilterTabs(
+                      selected: _selectedStatus,
+                      totalCount: _baseFilteredMateri.length,
+                      pendingCount: _baseFilteredMateri
+                          .where((item) => !item.isCompleted)
+                          .length,
+                      completedCount: _baseFilteredMateri
+                          .where((item) => item.isCompleted)
+                          .length,
+                      onChanged: (status) {
+                        setState(() {
+                          _selectedStatus = status;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 14),
                     MateriListSection(
                       items: _filteredMateri,
                       onMulaiBelajar: _openMateri,
+                      emptyTitle: switch (_selectedStatus) {
+                        ModulStatusFilter.belumSelesai => 'Semua Materi Sudah Selesai',
+                        ModulStatusFilter.selesai => 'Belum Ada Materi Selesai',
+                        ModulStatusFilter.semua => null,
+                      },
+                      emptySubtitle: switch (_selectedStatus) {
+                        ModulStatusFilter.belumSelesai =>
+                          'Hebat! Tidak ada materi yang belum dikerjakan pada filter ini.',
+                        ModulStatusFilter.selesai =>
+                          'Selesaikan materi terlebih dahulu untuk melihat daftar yang sudah tuntas.',
+                        ModulStatusFilter.semua => null,
+                      },
                     ),
+                  ],
 
                   const SizedBox(height: 26),
                 ],

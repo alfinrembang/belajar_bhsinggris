@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Komponen Tombol Reusable (CustomButton) untuk seluruh aplikasi.
@@ -81,28 +81,34 @@ class CustomButton extends StatelessWidget {
                       strokeWidth: 2.5,
                     ),
                   )
-                : Row(
-                    mainAxisSize: width == null ? MainAxisSize.min : MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        text,
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: fontSize,
-                          fontWeight: fontWeight,
-                          letterSpacing: 0.4,
-                        ),
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            text,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: fontSize,
+                              fontWeight: fontWeight,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                          if (icon != null) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              icon,
+                              color: Colors.white,
+                              size: iconSize,
+                            ),
+                          ],
+                        ],
                       ),
-                      if (icon != null) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          icon,
-                          color: Colors.white,
-                          size: iconSize,
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
           ),
         ),
