@@ -46,7 +46,11 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
     super.dispose();
   }
 
-  void _showNotification(String message, {bool isError = false}) {
+  void _showNotification(
+    String message, {
+    bool isError = false,
+    bool showServerAction = false,
+  }) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -66,12 +70,144 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
             ),
           ],
         ),
+        action: showServerAction
+            ? SnackBarAction(
+                label: 'Atur IP',
+                textColor: Colors.white,
+                onPressed: _showServerDialog,
+              )
+            : null,
         backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFF10B981),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
+  }
+
+  Future<void> _showServerDialog() async {
+    final ipController = TextEditingController(
+      text: Uri.tryParse(ApiClient.activeBaseUrl)?.host ?? '',
+    );
+    bool isChecking = false;
+    String? statusText;
+    bool isSuccessStatus = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> runAutoDiscovery() async {
+              setDialogState(() {
+                isChecking = true;
+                statusText = 'Mencari server Laravel di jaringan Wi-Fi...';
+                isSuccessStatus = false;
+              });
+              final found = await ApiClient.discoverWorkingBaseUrl();
+              if (!dialogContext.mounted) return;
+              setDialogState(() {
+                isChecking = false;
+                if (found != null) {
+                  ipController.text = Uri.tryParse(found)?.host ?? found;
+                  statusText = 'Terhubung ke:\n$found';
+                  isSuccessStatus = true;
+                } else {
+                  statusText = 'Server tidak ditemukan otomatis. Pastikan laptop & HP di Wi-Fi yang sama dan Laragon/Laravel aktif.';
+                  isSuccessStatus = false;
+                }
+              });
+            }
+
+            Future<void> runManualSave() async {
+              setDialogState(() {
+                isChecking = true;
+                statusText = 'Menguji koneksi...';
+                isSuccessStatus = false;
+              });
+              final found = await ApiClient.connectWithManualInput(ipController.text);
+              if (!dialogContext.mounted) return;
+              setDialogState(() {
+                isChecking = false;
+                if (found != null) {
+                  statusText = 'Berhasil terhubung ke:\n$found';
+                  isSuccessStatus = true;
+                } else {
+                  statusText = 'Gagal terhubung ke IP tersebut. Periksa IP laptop dan pastikan Laragon Apache/Laravel aktif.';
+                  isSuccessStatus = false;
+                }
+              });
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Text(
+                'Koneksi Server Laravel',
+                style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Server aktif saat ini:\n${ApiClient.activeBaseUrl}',
+                    style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: ipController,
+                    enabled: !isChecking,
+                    decoration: InputDecoration(
+                      labelText: 'IP Laptop (contoh: 192.168.9.210)',
+                      labelStyle: GoogleFonts.poppins(fontSize: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      isDense: true,
+                    ),
+                    style: GoogleFonts.poppins(fontSize: 13),
+                  ),
+                  if (statusText != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      statusText!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        color: isSuccessStatus
+                            ? const Color(0xFF059669)
+                            : const Color(0xFFDC2626),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isChecking ? null : () => Navigator.pop(dialogContext),
+                  child: Text('Tutup', style: GoogleFonts.poppins(fontSize: 12.5)),
+                ),
+                TextButton(
+                  onPressed: isChecking ? null : runAutoDiscovery,
+                  child: Text('Cari Otomatis', style: GoogleFonts.poppins(fontSize: 12.5)),
+                ),
+                ElevatedButton(
+                  onPressed: isChecking ? null : runManualSave,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0066D6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text(
+                    isChecking ? 'Menguji...' : 'Simpan & Tes',
+                    style: GoogleFonts.poppins(fontSize: 12.5),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    ipController.dispose();
   }
 
   Future<void> _handleMasuk() async {
@@ -109,6 +245,7 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
       // Simpan sesi login lokal secara persisten (Auto-Login)
       if (siswa != null) {
         await ApiService.saveSession(siswa);
+        if (!mounted) return;
       }
 
       _showNotification('Selamat datang, ${siswa?.namaLengkap ?? 'Siswa'}!');
@@ -140,7 +277,11 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
         ),
       );
     } else {
-      _showNotification(result['message'] ?? 'Login gagal!', isError: true);
+      _showNotification(
+        result['message'] ?? 'Login gagal!',
+        isError: true,
+        showServerAction: result['isConnectionError'] == true,
+      );
     }
   }
 
@@ -149,7 +290,9 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
     return Scaffold(
       body: AuthBackground(
         child: SafeArea(
-          child: Center(
+          child: Stack(
+            children: [
+              Center(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -402,6 +545,21 @@ class _LoginSiswaPageState extends State<LoginSiswaPage> {
                 ],
               ),
             ),
+          ),
+              Positioned(
+                top: 6,
+                right: 10,
+                child: IconButton(
+                  tooltip: 'Pengaturan IP Server',
+                  onPressed: _showServerDialog,
+                  icon: Icon(
+                    Icons.wifi_find_rounded,
+                    color: Colors.white.withValues(alpha: 0.78),
+                    size: 22,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

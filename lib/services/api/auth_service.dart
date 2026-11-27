@@ -124,12 +124,20 @@ class AuthService {
     } on SocketException {
       return {
         'success': false,
+        'isConnectionError': true,
         'message': 'Tidak dapat terhubung ke server Laravel. Pastikan backend aktif.',
       };
     } on TimeoutException {
       return {
         'success': false,
+        'isConnectionError': true,
         'message': 'Koneksi timeout. Silakan coba beberapa saat lagi.',
+      };
+    } on http.ClientException {
+      return {
+        'success': false,
+        'isConnectionError': true,
+        'message': 'Tidak dapat terhubung ke server Laravel. Pastikan backend aktif.',
       };
     } catch (e) {
       return {
