@@ -42,7 +42,7 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
   Map<String, String>? _step4Answers;
   int? _step4Benar;
   int? _step4Total;
-  int _step4CheckedCount = 0;
+  int _step4AnsweredCount = 0;
 
   @override
   void initState() {
@@ -98,15 +98,16 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
         _currentStep++;
       });
     } else {
-      // Validasi ketat: jika ada soal latihan, harus dikerjakan dan diperiksa semua
+      // Validasi: jika ada soal latihan, cukup pastikan semua soal sudah dipilih jawabannya
+      // (melihat kunci jawaban bersifat opsional)
       final soals = _detailData?['soals'] as List<dynamic>?;
       final totalSoal = soals?.length ?? 0;
 
-      if (totalSoal > 0 && _step4CheckedCount < totalSoal) {
+      if (totalSoal > 0 && _step4AnsweredCount < totalSoal) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '⚠️ Harap kerjakan dan periksa semua contoh soal terlebih dahulu! (Baru  dari  selesai)',
+              '⚠️ Harap pilih jawaban untuk semua contoh soal terlebih dahulu! (Baru $_step4AnsweredCount dari $totalSoal dijawab)',
             ),
             backgroundColor: const Color(0xFFDC2626),
             behavior: SnackBarBehavior.floating,
@@ -116,10 +117,25 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
         return;
       }
 
+      int? computedBenar = _step4Benar;
+      if (computedBenar == null && totalSoal > 0 && _step4Answers != null) {
+        int benarCount = 0;
+        for (int i = 0; i < totalSoal; i++) {
+          final s = soals![i];
+          final sId = (s['id'] ?? (i + 1)).toString();
+          final chosen = (_step4Answers![sId] ?? '').trim().toUpperCase();
+          final kunci = (s['kunci_jawaban'] ?? '').toString().trim().toUpperCase();
+          if (chosen.isNotEmpty && chosen == kunci) {
+            benarCount++;
+          }
+        }
+        computedBenar = benarCount;
+      }
+
       await _selesaikanMateriDenganHasil(
         jawaban: _step4Answers,
-        benar: _step4Benar,
-        total: _step4Total,
+        benar: computedBenar,
+        total: totalSoal > 0 ? totalSoal : _step4Total,
       );
     }
   }
@@ -270,7 +286,7 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
                         textBaseline: TextBaseline.alphabetic,
                         children: [
                           Text(
-                            '',
+                            '$skor',
                             style: GoogleFonts.poppins(
                               fontSize: 40,
                               fontWeight: FontWeight.w800,
@@ -314,7 +330,7 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                ' dari ',
+                                '${benar ?? 0} dari $total',
                                 style: GoogleFonts.poppins(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -345,7 +361,7 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '+ XP',
+                              '+$xpDidapat XP',
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
@@ -539,16 +555,16 @@ class _IsiMateriPageState extends State<IsiMateriPage> {
             IsiMateriStep4Section(
               soals: soals,
               xpReward: xpReward,
-              onProgressChanged: (jawaban, checkedCount, total) {
+              onProgressChanged: (jawaban, answeredCount, total) {
                 _step4Answers = jawaban;
-                _step4CheckedCount = checkedCount;
+                _step4AnsweredCount = answeredCount;
                 _step4Total = total;
               },
               onSelesai: (jawaban, benar, total) {
                 _step4Answers = jawaban;
                 _step4Benar = benar;
                 _step4Total = total;
-                _step4CheckedCount = total;
+                _step4AnsweredCount = total;
                 _selesaikanMateriDenganHasil(
                   jawaban: jawaban,
                   benar: benar,

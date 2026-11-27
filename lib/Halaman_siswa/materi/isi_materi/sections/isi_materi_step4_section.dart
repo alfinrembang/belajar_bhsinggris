@@ -162,11 +162,30 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
     return '$minutes:$seconds';
   }
 
+  void _notifyParentProgress() {
+    final hasDynamic = widget.soals != null && widget.soals!.isNotEmpty;
+    final totalCount = hasDynamic ? widget.soals!.length : 1;
+    final Map<String, String> progressMap = {};
+    int answeredCount = 0;
+
+    for (int i = 0; i < totalCount; i++) {
+      final chosen = _selectedAnswers[i];
+      if (chosen != null && chosen.isNotEmpty) {
+        answeredCount++;
+        final s = (hasDynamic && i < widget.soals!.length) ? widget.soals![i] : null;
+        final sId = (s is Map ? (s['id'] ?? (i + 1)) : (i + 1)).toString();
+        progressMap[sId] = chosen;
+      }
+    }
+    widget.onProgressChanged?.call(progressMap, answeredCount, totalCount);
+  }
+
   void _selectOption(String choiceKey) {
     if (_checkedAnswers[_activeSoalIndex] == true) return;
     setState(() {
       _selectedAnswers[_activeSoalIndex] = choiceKey;
     });
+    _notifyParentProgress();
   }
 
   void _checkAnswer(String kunciJawaban) {
@@ -186,20 +205,7 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
       _checkedAnswers[_activeSoalIndex] = true;
     });
 
-    // Notifikasi progres ke parent
-    final hasDynamic = widget.soals != null && widget.soals!.isNotEmpty;
-    final totalCount = hasDynamic ? widget.soals!.length : 1;
-    final Map<String, String> progressMap = {};
-    int checkedCount = 0;
-    for (int i = 0; i < totalCount; i++) {
-      if (_checkedAnswers[i] == true && _selectedAnswers[i] != null) {
-        checkedCount++;
-        final s = (widget.soals ?? [])[i];
-        final sId = (s['id'] ?? (i + 1)).toString();
-        progressMap[sId] = _selectedAnswers[i]!;
-      }
-    }
-    widget.onProgressChanged?.call(progressMap, checkedCount, totalCount);
+    _notifyParentProgress();
 
     final isCorrect = selected.trim().toUpperCase() == kunciJawaban.trim().toUpperCase();
 
@@ -215,6 +221,50 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  void _submitAllAnswers() {
+    final listSoal = widget.soals ?? [];
+    int unansweredIndex = -1;
+    for (int i = 0; i < listSoal.length; i++) {
+      if (_selectedAnswers[i] == null || _selectedAnswers[i]!.isEmpty) {
+        unansweredIndex = i;
+        break;
+      }
+    }
+
+    if (unansweredIndex != -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '⚠️ Soal nomor ${unansweredIndex + 1} belum dijawab! Pilih jawaban terlebih dahulu.',
+          ),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      _changeSoal(unansweredIndex);
+      return;
+    }
+
+    if (_isPlayingAudio) {
+      _audioPlayer.pause();
+    }
+
+    final Map<String, String> jawabanMap = {};
+    int benarCount = 0;
+    for (int i = 0; i < listSoal.length; i++) {
+      final s = listSoal[i];
+      final sId = (s['id'] ?? (i + 1)).toString();
+      final chosen = _selectedAnswers[i] ?? '';
+      jawabanMap[sId] = chosen;
+      final kunci = (s['kunci_jawaban'] ?? '').toString().trim().toUpperCase();
+      if (chosen.trim().toUpperCase() == kunci && kunci.isNotEmpty) {
+        benarCount++;
+      }
+    }
+    widget.onSelesai?.call(jawabanMap, benarCount, listSoal.length);
   }
 
   @override
@@ -831,10 +881,44 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
 
               const SizedBox(height: 16),
 
-              // Baris Tombol Aksi: Cek Jawaban / Navigasi
+              // Tombol Opsional: Periksa / Lihat Jawaban Benar & Pembahasan
+              if (!isChecked) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _checkAnswer(kunciJawaban),
+                    icon: const Icon(Icons.visibility_outlined, size: 17),
+                    label: Text(
+                      'Lihat Jawaban Benar (Opsional)',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: isListening
+                          ? const Color(0xFF7C3AED)
+                          : const Color(0xFF0066D6),
+                      side: BorderSide(
+                        color: (isListening
+                                ? const Color(0xFF7C3AED)
+                                : const Color(0xFF0066D6))
+                            .withValues(alpha: 0.45),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+
+              // Baris Tombol Navigasi Soal: Sebelumnya / Lanjut / Selesai
               Row(
                 children: [
-                  if (_activeSoalIndex > 0)
+                  if (_activeSoalIndex > 0) ...[
                     IconButton(
                       onPressed: () => _changeSoal(_activeSoalIndex - 1),
                       icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
@@ -843,58 +927,19 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
                         foregroundColor: const Color(0xFF475569),
                       ),
                     ),
-                  const SizedBox(width: 8),
+                    const SizedBox(width: 8),
+                  ],
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: isChecked
-                          ? (_activeSoalIndex < totalSoal - 1
-                              ? () => _changeSoal(_activeSoalIndex + 1)
-                              : () {
-                                  final listSoal = widget.soals ?? [];
-                                  int unansweredIndex = -1;
-                                  for (int i = 0; i < listSoal.length; i++) {
-                                    if (_checkedAnswers[i] != true || _selectedAnswers[i] == null) {
-                                      unansweredIndex = i;
-                                      break;
-                                    }
-                                  }
-
-                                  if (unansweredIndex != -1) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('⚠️ Soal nomor  belum dijawab dan diperiksa! Selesaikan semua soal terlebih dahulu.'),
-                                        backgroundColor: const Color(0xFFDC2626),
-                                        behavior: SnackBarBehavior.floating,
-                                        duration: const Duration(seconds: 3),
-                                      ),
-                                    );
-                                    _changeSoal(unansweredIndex);
-                                    return;
-                                  }
-
-                                  if (_isPlayingAudio) {
-                                    _audioPlayer.pause();
-                                  }
-
-                                  final Map<String, String> jawabanMap = {};
-                                  int benarCount = 0;
-                                  for (int i = 0; i < listSoal.length; i++) {
-                                    final s = listSoal[i];
-                                    final sId = (s['id'] ?? (i + 1)).toString();
-                                    final chosen = _selectedAnswers[i] ?? '';
-                                    jawabanMap[sId] = chosen;
-                                    final kunci = (s['kunci_jawaban'] ?? '').toString().trim().toUpperCase();
-                                    if (chosen.trim().toUpperCase() == kunci && kunci.isNotEmpty) {
-                                      benarCount++;
-                                    }
-                                  }
-                                  widget.onSelesai?.call(jawabanMap, benarCount, listSoal.length);
-                                })
-                          : () => _checkAnswer(kunciJawaban),
+                      onPressed: _activeSoalIndex < totalSoal - 1
+                          ? () => _changeSoal(_activeSoalIndex + 1)
+                          : _submitAllAnswers,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isChecked
-                            ? const Color(0xFF059669)
-                            : (isListening ? const Color(0xFF7C3AED) : const Color(0xFF0066D6)),
+                        backgroundColor: _activeSoalIndex < totalSoal - 1
+                            ? (isListening
+                                ? const Color(0xFF7C3AED)
+                                : const Color(0xFF0066D6))
+                            : const Color(0xFF059669),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         elevation: 0,
@@ -903,11 +948,9 @@ class _IsiMateriStep4SectionState extends State<IsiMateriStep4Section> {
                         ),
                       ),
                       child: Text(
-                        isChecked
-                            ? (_activeSoalIndex < totalSoal - 1
-                                ? 'Lanjut ke Soal Berikutnya →'
-                                : 'Semua Soal Selesai ✓')
-                            : 'Periksa Jawaban',
+                        _activeSoalIndex < totalSoal - 1
+                            ? 'Lanjut ke Soal Berikutnya →'
+                            : 'Selesai & Lihat Nilai ✓',
                         style: GoogleFonts.poppins(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
