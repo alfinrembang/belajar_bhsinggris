@@ -174,7 +174,7 @@ class ApiService {
   static Future<Map<String, dynamic>> submitQuizAnswers({
     required int quizId,
     int? siswaId,
-    required Map<String, String> jawaban,
+    required Map<String, dynamic> jawaban,
     int? waktuPengerjaanDetik,
   }) =>
       QuizService.submitQuizAnswers(
