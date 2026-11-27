@@ -7,14 +7,16 @@ import '../sections/quiz_list_section.dart';
 import 'sections/isi_quiz_header_section.dart';
 import 'sections/isi_quiz_question_card_section.dart';
 import 'sections/isi_quiz_options_section.dart';
+import 'sections/isi_quiz_true_false_section.dart';
 import 'sections/isi_quiz_action_buttons_section.dart';
 import 'sections/isi_quiz_navigation_palette_section.dart';
 import 'sections/isi_quiz_result_modal.dart';
 
-/// Model Butir Soal Kuis (Pilgan, Reading Passage, Listening Audio)
+/// Model Butir Soal Kuis (Pilgan, Reading Passage, Listening Audio, True/False)
 class QuizQuestionModel {
   final String id;
   final int questionNumber;
+  final String tipeSoal;
   final String? readingPassage;
   final String questionText;
   final bool isListening;
@@ -22,10 +24,12 @@ class QuizQuestionModel {
   final String? audioDuration;
   final String? audioUrl;
   final List<String> options;
+  final List<QuizStatementItem> pernyataanItems;
 
   const QuizQuestionModel({
     required this.id,
     required this.questionNumber,
+    this.tipeSoal = 'pilgan',
     this.readingPassage,
     required this.questionText,
     this.isListening = false,
@@ -33,7 +37,10 @@ class QuizQuestionModel {
     this.audioDuration,
     this.audioUrl,
     required this.options,
+    this.pernyataanItems = const [],
   });
+
+  bool get isTrueFalse => tipeSoal == 'true_false';
 }
 
 /// Halaman Isi Quiz Siswa: Mengambil butir soal secara dinamis dari database guru,
@@ -58,6 +65,7 @@ class IsiQuizPage extends StatefulWidget {
 class _IsiQuizPageState extends State<IsiQuizPage> {
   int _currentIndex = 0;
   final Map<int, int> _answers = {}; // questionIndex -> selectedOptionIndex (0:A, 1:B, 2:C, 3:D)
+  final Map<int, Map<int, String>> _trueFalseAnswers = {}; // questionIndex -> {statementNo: 'true'|'false'}
 
   bool _isLoadingQuestions = true;
   String? _errorMessage;
@@ -160,16 +168,32 @@ class _IsiQuizPageState extends State<IsiQuizPage> {
           final mapped = rawSoals.map((s) {
             final tipe = s['tipe_soal']?.toString() ?? 'pilgan';
             final isListening = tipe == 'listening';
-            final opts = [
-              s['pilihan_a']?.toString() ?? '-',
-              s['pilihan_b']?.toString() ?? '-',
-              s['pilihan_c']?.toString() ?? '-',
-              s['pilihan_d']?.toString() ?? '-',
-            ];
+            final rawStatements = s['pernyataan_items'] as List<dynamic>? ?? const [];
+            final pernyataanItems = <QuizStatementItem>[];
+            for (var idx = 0; idx < rawStatements.length; idx++) {
+              final item = rawStatements[idx];
+              if (item is Map) {
+                final no = int.tryParse(item['no']?.toString() ?? '') ?? (idx + 1);
+                final teks = item['teks']?.toString() ?? '';
+                if (teks.trim().isNotEmpty) {
+                  pernyataanItems.add(QuizStatementItem(no: no, teks: teks));
+                }
+              }
+            }
+
+            final opts = tipe == 'true_false'
+                ? const <String>[]
+                : [
+                    s['pilihan_a']?.toString() ?? '-',
+                    s['pilihan_b']?.toString() ?? '-',
+                    s['pilihan_c']?.toString() ?? '-',
+                    s['pilihan_d']?.toString() ?? '-',
+                  ];
 
             return QuizQuestionModel(
               id: s['id']?.toString() ?? '0',
               questionNumber: int.tryParse(s['nomor_soal']?.toString() ?? '1') ?? 1,
+              tipeSoal: tipe,
               readingPassage: s['reading_passage']?.toString(),
               questionText: s['pertanyaan']?.toString() ?? 'Pertanyaan kuis',
               isListening: isListening,
@@ -177,6 +201,7 @@ class _IsiQuizPageState extends State<IsiQuizPage> {
               audioDuration: s['audio_duration']?.toString(),
               audioUrl: ApiService.resolveAudioUrl(s['audio_url']?.toString()),
               options: opts,
+              pernyataanItems: pernyataanItems,
             );
           }).toList();
 
@@ -219,6 +244,28 @@ class _IsiQuizPageState extends State<IsiQuizPage> {
     setState(() {
       _answers[_currentIndex] = optionIndex;
     });
+  }
+
+  void _handleSelectTrueFalse(int statementNo, String value) {
+    setState(() {
+      final current = _trueFalseAnswers.putIfAbsent(_currentIndex, () => {});
+      current[statementNo] = value;
+    });
+  }
+
+  bool _isQuestionAnswered(int index) {
+    if (index < 0 || index >= _questions.length) return false;
+    final q = _questions[index];
+    if (q.isTrueFalse) {
+      if (q.pernyataanItems.isEmpty) return false;
+      final rowAnswers = _trueFalseAnswers[index];
+      if (rowAnswers == null) return false;
+      return q.pernyataanItems.every((stmt) {
+        final val = rowAnswers[stmt.no];
+        return val == 'true' || val == 'false';
+      });
+    }
+    return _answers.containsKey(index);
   }
 
   void _handlePrevious() {
@@ -277,9 +324,19 @@ class _IsiQuizPageState extends State<IsiQuizPage> {
 
   /// Validasi ketat: Tombol selesai tidak dapat diproses jika masih ada soal belum terjawab
   void _confirmFinishQuiz() {
-    final unansweredCount = _questions.length - _answers.length;
+    int unansweredCount = 0;
+    int firstUnanswered = -1;
+    for (int i = 0; i < _questions.length; i++) {
+      if (!_isQuestionAnswered(i)) {
+        unansweredCount++;
+        if (firstUnanswered == -1) firstUnanswered = i;
+      }
+    }
 
     if (unansweredCount > 0) {
+      if (firstUnanswered != -1) {
+        setState(() => _currentIndex = firstUnanswered);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -288,7 +345,7 @@ class _IsiQuizPageState extends State<IsiQuizPage> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Masih ada $unansweredCount soal yang belum dijawab! Mohon jawab semua soal sebelum menyelesaikan kuis.',
+                  'Masih ada $unansweredCount soal yang belum dijawab lengkap! Mohon lengkapi semua soal sebelum menyelesaikan kuis.',
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                 ),
               ),
@@ -315,15 +372,31 @@ class _IsiQuizPageState extends State<IsiQuizPage> {
 
     final qId = widget.quizId ?? int.tryParse(widget.quizData?.id ?? '');
 
-    // Konversi jawaban map integer (0,1,2,3) ke huruf opsi (A,B,C,D)
-    final Map<String, String> jawaban = {};
+    // Konversi jawaban pilgan (A/B/C/D) maupun pernyataan True/False ke payload server
+    final Map<String, dynamic> jawaban = {};
     for (int i = 0; i < _questions.length; i++) {
       final q = _questions[i];
-      final optIdx = _answers[i];
-      if (optIdx != null && optIdx >= 0 && optIdx < 4) {
-        jawaban[q.id] = ['A', 'B', 'C', 'D'][optIdx];
-      } else if (force) {
-        jawaban[q.id] = 'A'; // Pilihan default saat waktu habis darurat
+      if (q.isTrueFalse) {
+        final Map<String, String> rowMap = {};
+        final savedRows = _trueFalseAnswers[i] ?? const {};
+        for (final stmt in q.pernyataanItems) {
+          final val = savedRows[stmt.no];
+          if (val == 'true' || val == 'false') {
+            rowMap['${stmt.no}'] = val!;
+          } else if (force) {
+            rowMap['${stmt.no}'] = 'true';
+          }
+        }
+        if (rowMap.isNotEmpty) {
+          jawaban[q.id] = rowMap;
+        }
+      } else {
+        final optIdx = _answers[i];
+        if (optIdx != null && optIdx >= 0 && optIdx < 4) {
+          jawaban[q.id] = ['A', 'B', 'C', 'D'][optIdx];
+        } else if (force) {
+          jawaban[q.id] = 'A'; // Pilihan default saat waktu habis darurat
+        }
       }
     }
 
@@ -508,12 +581,19 @@ class _IsiQuizPageState extends State<IsiQuizPage> {
 
                     const SizedBox(height: 18),
 
-                    // Pilihan Jawaban A, B, C, D
-                    IsiQuizOptionsSection(
-                      options: currentQ.options,
-                      selectedIndex: selectedOption,
-                      onSelectOption: _handleSelectOption,
-                    ),
+                    // Pilihan Jawaban: Tabel Pernyataan True/False atau Pilihan Ganda A-D
+                    if (currentQ.isTrueFalse)
+                      IsiQuizTrueFalseSection(
+                        statements: currentQ.pernyataanItems,
+                        selectedAnswers: _trueFalseAnswers[_currentIndex] ?? const {},
+                        onSelectAnswer: _handleSelectTrueFalse,
+                      )
+                    else
+                      IsiQuizOptionsSection(
+                        options: currentQ.options,
+                        selectedIndex: selectedOption,
+                        onSelectOption: _handleSelectOption,
+                      ),
 
                     const SizedBox(height: 20),
 
@@ -538,6 +618,10 @@ class _IsiQuizPageState extends State<IsiQuizPage> {
                 totalQuestions: _questions.length,
                 currentIndex: _currentIndex,
                 answers: _answers,
+                answeredIndices: {
+                  for (int i = 0; i < _questions.length; i++)
+                    if (_isQuestionAnswered(i)) i,
+                },
                 onSelectQuestion: _handleSelectQuestion,
               ),
             ),

@@ -6,6 +6,7 @@ class IsiQuizNavigationPaletteSection extends StatelessWidget {
   final int totalQuestions;
   final int currentIndex;
   final Map<int, int> answers;
+  final Set<int>? answeredIndices;
   final ValueChanged<int> onSelectQuestion;
 
   const IsiQuizNavigationPaletteSection({
@@ -13,6 +14,7 @@ class IsiQuizNavigationPaletteSection extends StatelessWidget {
     required this.totalQuestions,
     required this.currentIndex,
     required this.answers,
+    this.answeredIndices,
     required this.onSelectQuestion,
   });
 
@@ -74,7 +76,9 @@ class IsiQuizNavigationPaletteSection extends StatelessWidget {
             physics: const BouncingScrollPhysics(),
             child: Row(
               children: List.generate(totalQuestions, (index) {
-                final bool isAnswered = answers.containsKey(index);
+                final bool isAnswered = answeredIndices != null
+                    ? answeredIndices!.contains(index)
+                    : answers.containsKey(index);
                 final bool isActive = currentIndex == index;
 
                 Color bgColor;
